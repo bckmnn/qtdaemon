@@ -37,47 +37,25 @@
 // We mean it.
 //
 
-#ifndef QDAEMONAPPLICATION_P_H
-#define QDAEMONAPPLICATION_P_H
+#ifndef QDAEMONCONTROLLER_P_H
+#define QDAEMONCONTROLLER_P_H
 
-#include "qdaemon-global.h"
-#include "qdaemonlog.h"
-
-#include <QtCore/qcommandlineparser.h>
-#include <QtCore/qcommandlineoption.h>
+#include "QtDaemon/qdaemon-global.h"
 
 QT_BEGIN_NAMESPACE
 
-namespace QtDaemon
+class QDaemonController;
+class Q_DAEMON_EXPORT QDaemonControllerPrivate
 {
-    class QAbstractDaemonBackend;
-}
+    Q_DECLARE_PUBLIC(QDaemonController)
 
-class QDaemonApplication;
-class Q_DAEMON_EXPORT QDaemonApplicationPrivate
-{
-    Q_DECLARE_PUBLIC(QDaemonApplication)
 public:
-    QDaemonApplicationPrivate(QDaemonApplication *);
-    ~QDaemonApplicationPrivate();
+    QDaemonControllerPrivate(QDaemonController *);
 
 private:
-    int exec();
-
-    static void processSignalHandler(int);
-
-private:
-    QtDaemon::QAbstractDaemonBackend * createBackend(bool);
-
-private:
-    QDaemonApplication * q_ptr;
-    QDaemonLog log;
-    bool autoQuit;
-    QCommandLineParser parser;
-
-    static QString description;
+    QDaemonController * q_ptr;
 };
 
 QT_END_NAMESPACE
 
-#endif // QDAEMONAPPLICATION_P_H
+#endif // QDAEMONCONTROLLER_P_H

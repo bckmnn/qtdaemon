@@ -26,58 +26,67 @@
 **
 ****************************************************************************/
 
-//
-//  W A R N I N G
-//  -------------
-//
-// This file is not part of the QtDaemon API. It exists only
-// as an implementation detail. This header file may change from
-// version to version without notice, or even be removed.
-//
-// We mean it.
-//
+#ifndef QDAEMONCONTROLLER_H
+#define QDAEMONCONTROLLER_H
 
-#ifndef QDAEMONAPPLICATION_P_H
-#define QDAEMONAPPLICATION_P_H
+#include "QtDaemon/qdaemon-global.h"
 
-#include "qdaemon-global.h"
-#include "qdaemonlog.h"
-
-#include <QtCore/qcommandlineparser.h>
-#include <QtCore/qcommandlineoption.h>
+#include <QtCore/qobject.h>
 
 QT_BEGIN_NAMESPACE
 
+class QCommandLineParser;
+
 namespace QtDaemon
 {
-    class QAbstractDaemonBackend;
+    enum DaemonStatus  {
+        DaemonRunning,
+        DaemonNotRunning
+    };
 }
 
-class QDaemonApplication;
-class Q_DAEMON_EXPORT QDaemonApplicationPrivate
+class QDaemonControllerPrivate;
+class Q_DAEMON_EXPORT QDaemonController : public QObject
 {
-    Q_DECLARE_PUBLIC(QDaemonApplication)
+    Q_OBJECT
+    Q_DECLARE_PRIVATE(QDaemonController)
+    Q_DISABLE_COPY(QDaemonController)
+
 public:
-    QDaemonApplicationPrivate(QDaemonApplication *);
-    ~QDaemonApplicationPrivate();
+    enum ControllerOption {
+        // Lnux only
+        InitdPrefixOption,
+        DbusPrefixOption,
+        // Windows only
+        UpdatePathOption,
+        // OSX only
+        AgentOption,
+        UserOption
+    };
+
+public:
+    explicit QDaemonController(QObject * = 0);
+
+    bool start();
+    bool stop();
+    bool install();
+    bool uninstall();
+
+    void setOption(ControllerOption, bool = true);
+    void setOption(ControllerOption, const QString &);
+    void setOption(ControllerOption, const QVariant &);
+    QVariant option(ControllerOption) const;
+
+    QtDaemon::DaemonStatus status();
+
+protected:
+//    virtual bool processCommandLine(const QCommandLineParser &);
+    virtual QString helpText(const QCommandLineParser &) const;
 
 private:
-    int exec();
-
-    static void processSignalHandler(int);
-
-private:
-    QtDaemon::QAbstractDaemonBackend * createBackend(bool);
-
-private:
-    QDaemonApplication * q_ptr;
-    QDaemonLog log;
-    bool autoQuit;
-    QCommandLineParser parser;
-
-    static QString description;
+    QDaemonControllerPrivate * d_ptr;
 };
 
 QT_END_NAMESPACE
 
-#endif // QDAEMONAPPLICATION_P_H
+#endif // QDAEMONCONTROLLER_H

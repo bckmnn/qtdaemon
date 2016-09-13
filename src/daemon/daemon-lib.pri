@@ -9,19 +9,23 @@ unix:!macx  {
 SOURCES += \
     $$PWD/qdaemonapplication.cpp \
     $$PWD/qdaemonlog.cpp \
+    $$PWD/qdaemoncontroller.cpp \
+    $$PWD/private/qabstractdaemonbackend.cpp \
     $$PWD/private/qdaemonlog_p.cpp \
     $$PWD/private/qdaemonapplication_p.cpp \
-    $$PWD/private/qabstractdaemonbackend.cpp
+    $$PWD/private/qdaemoncontroller_p.cpp
 
 PUBLIC_HEADERS += \
     $$PWD/qdaemon-global.h \
     $$PWD/qdaemonapplication.h \
-    $$PWD/qdaemonlog.h
+    $$PWD/qdaemonlog.h \
+    $$PWD/qdaemoncontroller.h
 
 PRIVATE_HEADERS += \
+    $$PWD/private/qabstractdaemonbackend.h \
     $$PWD/private/qdaemonapplication_p.h \
     $$PWD/private/qdaemonlog_p.h \
-    $$PWD/private/qabstractdaemonbackend.h
+    $$PWD/private/qdaemoncontroller_p.h
 
 unix:RESOURCES += qdaemon.qrc
 

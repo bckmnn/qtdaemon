@@ -52,3 +52,11 @@ qhp.QtDaemon.subprojects.examples.sortPages  = true
 
 navigation.landingpage = Qt Daemon
 navigation.cppclassespage = Qt Daemon C++ Classes
+
+HTML.footer = "<div class=\"footer\"> \
+   <p> \
+   <acronym title=\"Copyright\">&copy;</acronym> 2016 Konstantin Shegunov, Samuel Gaist. \
+   Documentation contributions included herein are the copyrights of their respective owners. <br> \
+   The documentation provided herein is licensed under the terms of the  <a href=\"https://opensource.org/licenses/MIT\">MIT License</a> as published by the Open Source Initiative.<br /> \
+   Qt and respective logos are trademarks of The Qt Company Ltd. in Finland and/or other countries worldwide. All other trademarks are property of their respective owners. </p> \
+</div>"

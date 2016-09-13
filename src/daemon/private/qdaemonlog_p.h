@@ -48,7 +48,7 @@
 
 QT_BEGIN_NAMESPACE
 
-class QDaemonLogPrivate
+class Q_DAEMON_EXPORT QDaemonLogPrivate
 {
     friend class QDaemonLog;
     friend QDaemonLog & qDaemonLog();

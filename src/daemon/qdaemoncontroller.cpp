@@ -26,58 +26,37 @@
 **
 ****************************************************************************/
 
-//
-//  W A R N I N G
-//  -------------
-//
-// This file is not part of the QtDaemon API. It exists only
-// as an implementation detail. This header file may change from
-// version to version without notice, or even be removed.
-//
-// We mean it.
-//
-
-#ifndef QDAEMONAPPLICATION_P_H
-#define QDAEMONAPPLICATION_P_H
-
-#include "qdaemon-global.h"
-#include "qdaemonlog.h"
+#include "qdaemoncontroller.h"
+#include "private/qdaemoncontroller_p.h"
 
 #include <QtCore/qcommandlineparser.h>
-#include <QtCore/qcommandlineoption.h>
 
 QT_BEGIN_NAMESPACE
 
-namespace QtDaemon
+QDaemonController::QDaemonController(QObject * parent)
+    : QObject(parent), d_ptr(new QDaemonControllerPrivate(this))
 {
-    class QAbstractDaemonBackend;
 }
 
-class QDaemonApplication;
-class Q_DAEMON_EXPORT QDaemonApplicationPrivate
+bool QDaemonController::start()
 {
-    Q_DECLARE_PUBLIC(QDaemonApplication)
-public:
-    QDaemonApplicationPrivate(QDaemonApplication *);
-    ~QDaemonApplicationPrivate();
+}
 
-private:
-    int exec();
+bool QDaemonController::stop()
+{
+}
 
-    static void processSignalHandler(int);
+bool QDaemonController::install()
+{
+}
 
-private:
-    QtDaemon::QAbstractDaemonBackend * createBackend(bool);
+bool QDaemonController::uninstall()
+{
+}
 
-private:
-    QDaemonApplication * q_ptr;
-    QDaemonLog log;
-    bool autoQuit;
-    QCommandLineParser parser;
-
-    static QString description;
-};
+QString QDaemonController::helpText(const QCommandLineParser & parser) const
+{
+    return parser.helpText();
+}
 
 QT_END_NAMESPACE
-
-#endif // QDAEMONAPPLICATION_P_H
