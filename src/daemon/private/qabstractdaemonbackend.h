@@ -72,12 +72,6 @@ namespace QtDaemon
     {
         Q_DISABLE_COPY(QAbstractControllerBackend)
 
-    protected:
-        enum DaemonStatus {
-            RunningStatus,
-            NotRunningStatus
-        };
-
     public:
         QAbstractControllerBackend(QCommandLineParser &, bool);
 

@@ -42,7 +42,12 @@
 
 #include "QtDaemon/qdaemon-global.h"
 
+#include <QtCore/qhash.h>
+#include <QtCore/qvariant.h>
+
 QT_BEGIN_NAMESPACE
+
+// TOOD: [END]
 
 class QDaemonController;
 class Q_DAEMON_EXPORT QDaemonControllerPrivate
@@ -52,8 +57,16 @@ class Q_DAEMON_EXPORT QDaemonControllerPrivate
 public:
     QDaemonControllerPrivate(QDaemonController *);
 
+    bool start();
+    bool stop();
+    bool install();
+    bool uninstall();
+
+    QtDaemon::DaemonStatus status();
+
 private:
     QDaemonController * q_ptr;
+    QHash<QtDaemon::ControllerOption, QVariant> options;
 };
 
 QT_END_NAMESPACE

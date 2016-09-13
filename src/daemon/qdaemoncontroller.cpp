@@ -29,34 +29,58 @@
 #include "qdaemoncontroller.h"
 #include "private/qdaemoncontroller_p.h"
 
+#include <QtCore/qcoreapplication.h>
 #include <QtCore/qcommandlineparser.h>
 
 QT_BEGIN_NAMESPACE
 
-QDaemonController::QDaemonController(QObject * parent)
-    : QObject(parent), d_ptr(new QDaemonControllerPrivate(this))
+using namespace QtDaemon;
+
+QDaemonController::QDaemonController(QCoreApplication & app)
+    : QObject(&app), d_ptr(new QDaemonControllerPrivate(this))
 {
 }
 
 bool QDaemonController::start()
 {
+    Q_D(QDaemonController);
+    return d->start();
 }
 
 bool QDaemonController::stop()
 {
+    Q_D(QDaemonController);
+    return d->stop();
 }
 
 bool QDaemonController::install()
 {
+    Q_D(QDaemonController);
+    return d->install();
 }
 
 bool QDaemonController::uninstall()
 {
+    Q_D(QDaemonController);
+    return d->uninstall();
 }
 
-QString QDaemonController::helpText(const QCommandLineParser & parser) const
+QtDaemon::DaemonStatus QDaemonController::status()
 {
-    return parser.helpText();
+    Q_D(QDaemonController);
+    return d->status();
+}
+
+void QDaemonController::setOption(ControllerOption opt, const QVariant & value)
+{
+    Q_D(QDaemonController);
+    d->options.insert(opt, value);
+}
+
+QVariant QDaemonController::option(ControllerOption opt) const
+{
+    Q_D(const QDaemonController);
+    return d->options.value(opt);
 }
 
 QT_END_NAMESPACE

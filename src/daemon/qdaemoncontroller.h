@@ -35,15 +35,8 @@
 
 QT_BEGIN_NAMESPACE
 
+class QCoreApplication;
 class QCommandLineParser;
-
-namespace QtDaemon
-{
-    enum DaemonStatus  {
-        DaemonRunning,
-        DaemonNotRunning
-    };
-}
 
 class QDaemonControllerPrivate;
 class Q_DAEMON_EXPORT QDaemonController : public QObject
@@ -53,35 +46,17 @@ class Q_DAEMON_EXPORT QDaemonController : public QObject
     Q_DISABLE_COPY(QDaemonController)
 
 public:
-    enum ControllerOption {
-        // Lnux only
-        InitdPrefixOption,
-        DbusPrefixOption,
-        // Windows only
-        UpdatePathOption,
-        // OSX only
-        AgentOption,
-        UserOption
-    };
-
-public:
-    explicit QDaemonController(QObject * = 0);
+    explicit QDaemonController(QCoreApplication &);
 
     bool start();
     bool stop();
     bool install();
     bool uninstall();
 
-    void setOption(ControllerOption, bool = true);
-    void setOption(ControllerOption, const QString &);
-    void setOption(ControllerOption, const QVariant &);
-    QVariant option(ControllerOption) const;
-
     QtDaemon::DaemonStatus status();
 
-protected:
-//    virtual bool processCommandLine(const QCommandLineParser &);
-    virtual QString helpText(const QCommandLineParser &) const;
+    void setOption(QtDaemon::ControllerOption, const QVariant &);
+    QVariant option(QtDaemon::ControllerOption) const;
 
 private:
     QDaemonControllerPrivate * d_ptr;

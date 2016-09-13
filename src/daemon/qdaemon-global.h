@@ -17,6 +17,27 @@ QT_BEGIN_NAMESPACE
     #define Q_DAEMON_LOCAL
 #endif
 
+namespace QtDaemon
+{
+    enum DaemonStatus
+    {
+        DaemonRunning,
+        DaemonNotRunning
+    };
+
+    enum ControllerOption
+    {
+        // Lnux only
+        InitDPrefixOption,
+        DBusPrefixOption,
+        // Windows only
+        UpdatePathOption,
+        // macOS only
+        AgentOption,
+        UserOption
+    };
+}
+
 QT_END_NAMESPACE
 
 #endif // QDAEMON_GLOBAL_H
