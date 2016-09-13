@@ -1,8 +1,8 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 Samuel Gaist <samuel.gaist@edeltech.ch>
+** Copyright (C) 2016 Konstantin Shegunov <kshegunov@gmail.com>
 **
-** This file is part of the QDaemon library.
+** This file is part of the QtDaemon library.
 **
 ** The MIT License (MIT)
 **
@@ -26,31 +26,44 @@
 **
 ****************************************************************************/
 
-#include "daemonbackend_osx.h"
-#include "qdaemonapplication.h"
+//
+//  W A R N I N G
+//  -------------
+//
+// This file is not part of the QtDaemon API. It exists only
+// as an implementation detail. This header file may change from
+// version to version without notice, or even be removed.
+//
+// We mean it.
+//
 
-#include <QtCore/qcommandlineparser.h>
+#ifndef CONTROLLERBACKEND_WIN_H
+#define CONTROLLERBACKEND_WIN_H
 
-QT_BEGIN_NAMESPACE
+#include "QtDaemon/qabstractdaemonbackend.h"
 
-using namespace QtDaemon;
+#include <QCommandLineOption>
 
-DaemonBackendOSX::DaemonBackendOSX(QCommandLineParser & arguments)
-    : QAbstractDaemonBackend(arguments)
+QT_DAEMON_BEGIN_NAMESPACE
+
+class Q_DAEMON_LOCAL ControllerBackendWindows : public QAbstractControllerBackend
 {
-}
+    Q_DISABLE_COPY(ControllerBackendWindows)
 
-DaemonBackendOSX::~DaemonBackendOSX()
-{
-}
+public:
+    ControllerBackendWindows(QCommandLineParser &, bool);
 
-int DaemonBackendOSX::exec()
-{
-    QStringList arguments = parser.positionalArguments();
-    arguments.prepend(QDaemonApplication::applicationFilePath());
+    bool start() Q_DECL_OVERRIDE;
+    bool stop() Q_DECL_OVERRIDE;
+    bool install() Q_DECL_OVERRIDE;
+    bool uninstall() Q_DECL_OVERRIDE;
+    DaemonStatus status() Q_DECL_OVERRIDE;
 
-    QMetaObject::invokeMethod(qApp, "daemonized", Qt::QueuedConnection, Q_ARG(QStringList, arguments));
-    return QCoreApplication::exec();
-}
+private:
+    const QCommandLineOption updatePathOption;
+};
 
-QT_END_NAMESPACE
+QT_DAEMON_END_NAMESPACE
+
+#endif // CONTROLLERBACKEND_WIN_H
+

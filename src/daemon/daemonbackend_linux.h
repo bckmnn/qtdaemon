@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 Samuel Gaist <samuel.gaist@edeltech.ch>
+** Copyright (C) 2016 Konstantin Shegunov <kshegunov@gmail.com>
 **
 ** This file is part of the QtDaemon library.
 **
@@ -37,40 +37,35 @@
 // We mean it.
 //
 
-#ifndef CONTROLLERBACKEND_OSX_H
-#define CONTROLLERBACKEND_OSX_H
+#ifndef DAEMONBACKEND_LINUX_H
+#define DAEMONBACKEND_LINUX_H
 
 #include "QtDaemon/qabstractdaemonbackend.h"
 
-QT_BEGIN_NAMESPACE
+#include <QtCore/qobject.h>
 
-namespace QtDaemon
+#define Q_DAEMON_DBUS_CONTROL_INTERFACE "io.qt.QtDaemon.Control"
+
+QT_DAEMON_BEGIN_NAMESPACE
+
+class Q_DAEMON_LOCAL DaemonBackendLinux : public QObject, public QAbstractDaemonBackend
 {
-    class Q_DAEMON_LOCAL ControllerBackendOSX : public QAbstractControllerBackend
-    {
-        Q_DISABLE_COPY(ControllerBackendOSX)
+    Q_OBJECT
+    Q_DISABLE_COPY(DaemonBackendLinux)
+    Q_CLASSINFO("D-Bus Interface", Q_DAEMON_DBUS_CONTROL_INTERFACE)
 
-    public:
-        ControllerBackendOSX(QCommandLineParser &, bool);
+public:
+    DaemonBackendLinux(QCommandLineParser &);
+    ~DaemonBackendLinux() Q_DECL_OVERRIDE;
 
-        bool start() Q_DECL_OVERRIDE;
-        bool stop() Q_DECL_OVERRIDE;
-        bool install() Q_DECL_OVERRIDE;
-        bool uninstall() Q_DECL_OVERRIDE;
-        DaemonStatus status() Q_DECL_OVERRIDE;
+    int exec() Q_DECL_OVERRIDE;
 
-    private:
-        QString configurationPath() const;
-        QString daemonTargetFileName() const;
-        QString daemonName() const;
-        QString configurationFilePath() const;
+    Q_INVOKABLE bool isRunning();
+    Q_INVOKABLE bool stop();
 
-    private:
-        const QCommandLineOption agentOption;
-        const QCommandLineOption userOption;
-    };
-}
+    static QString serviceName();
+};
 
-QT_END_NAMESPACE
+QT_DAEMON_END_NAMESPACE
 
-#endif // CONTROLLERBACKEND_OSX_H
+#endif // DAEMONBACKEND_LINUX_H

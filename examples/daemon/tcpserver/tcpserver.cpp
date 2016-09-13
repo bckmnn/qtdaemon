@@ -34,6 +34,8 @@
 #include <QCommandLineOption>
 #include <QDaemonLog>
 
+using namespace QtDaemon;
+
 const quint16 TcpServer::defaultPort = 5890;
 
 TcpServer::TcpServer(QObject * parent)

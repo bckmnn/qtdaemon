@@ -31,6 +31,8 @@
 #include <QDaemonLog>
 #include <QStringList>
 
+using namespace QtDaemon;
+
 SimpleDaemon::SimpleDaemon(QObject * parent)
     : QObject(parent)
 {

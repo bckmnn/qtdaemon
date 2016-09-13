@@ -37,9 +37,7 @@
 #include <QtDBus/qdbusconnection.h>
 #include <QtDBus/qdbuserror.h>
 
-QT_BEGIN_NAMESPACE
-
-using namespace QtDaemon;
+QT_DAEMON_BEGIN_NAMESPACE
 
 DaemonBackendLinux::DaemonBackendLinux(QCommandLineParser & arguments)
     : QAbstractDaemonBackend(arguments)
@@ -115,4 +113,4 @@ QString DaemonBackendLinux::serviceName()
     return elements.join('.') + QStringLiteral(".") + executable;
 }
 
-QT_END_NAMESPACE
+QT_DAEMON_END_NAMESPACE

@@ -37,29 +37,37 @@
 // We mean it.
 //
 
-#ifndef DAEMONBACKEND_OSX_H
-#define DAEMONBACKEND_OSX_H
+#ifndef CONTROLLERBACKEND_OSX_H
+#define CONTROLLERBACKEND_OSX_H
 
 #include "QtDaemon/qabstractdaemonbackend.h"
 
-#include <QtCore/qobject.h>
+QT_DAEMON_BEGIN_NAMESPACE
 
-QT_BEGIN_NAMESPACE
-
-namespace QtDaemon
+class Q_DAEMON_LOCAL ControllerBackendOSX : public QAbstractControllerBackend
 {
-    class Q_DAEMON_LOCAL DaemonBackendOSX : public QAbstractDaemonBackend
-    {
-        Q_DISABLE_COPY(DaemonBackendOSX)
+    Q_DISABLE_COPY(ControllerBackendOSX)
 
-    public:
-        DaemonBackendOSX(QCommandLineParser &);
-        ~DaemonBackendOSX() Q_DECL_OVERRIDE;
+public:
+    ControllerBackendOSX(QCommandLineParser &, bool);
 
-        int exec() Q_DECL_OVERRIDE;
-    };
-}
+    bool start() Q_DECL_OVERRIDE;
+    bool stop() Q_DECL_OVERRIDE;
+    bool install() Q_DECL_OVERRIDE;
+    bool uninstall() Q_DECL_OVERRIDE;
+    DaemonStatus status() Q_DECL_OVERRIDE;
 
-QT_END_NAMESPACE
+private:
+    QString configurationPath() const;
+    QString daemonTargetFileName() const;
+    QString daemonName() const;
+    QString configurationFilePath() const;
 
-#endif // DAEMONBACKEND_OSX_H
+private:
+    const QCommandLineOption agentOption;
+    const QCommandLineOption userOption;
+};
+
+QT_DAEMON_END_NAMESPACE
+
+#endif // CONTROLLERBACKEND_OSX_H

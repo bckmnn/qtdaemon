@@ -37,38 +37,27 @@
 // We mean it.
 //
 
-#ifndef DAEMONBACKEND_LINUX_H
-#define DAEMONBACKEND_LINUX_H
+#ifndef DAEMONBACKEND_WIN_H
+#define DAEMONBACKEND_WIN_H
 
 #include "QtDaemon/qabstractdaemonbackend.h"
 
-#include <QtCore/qobject.h>
-
-#define Q_DAEMON_DBUS_CONTROL_INTERFACE "io.qt.QtDaemon.Control"
-
-QT_BEGIN_NAMESPACE
+QT_DAEMON_BEGIN_NAMESPACE
 
 namespace QtDaemon
 {
-    class Q_DAEMON_LOCAL DaemonBackendLinux : public QObject, public QAbstractDaemonBackend
+    class Q_DAEMON_LOCAL DaemonBackendWindows : public QAbstractDaemonBackend
     {
-        Q_OBJECT
-        Q_DISABLE_COPY(DaemonBackendLinux)
-        Q_CLASSINFO("D-Bus Interface", Q_DAEMON_DBUS_CONTROL_INTERFACE)
+        Q_DISABLE_COPY(DaemonBackendWindows)
 
     public:
-        DaemonBackendLinux(QCommandLineParser &);
-        ~DaemonBackendLinux() Q_DECL_OVERRIDE;
+        DaemonBackendWindows(QCommandLineParser &);
+        ~DaemonBackendWindows() Q_DECL_OVERRIDE;
 
         int exec() Q_DECL_OVERRIDE;
-
-        Q_INVOKABLE bool isRunning();
-        Q_INVOKABLE bool stop();
-
-        static QString serviceName();
     };
 }
 
-QT_END_NAMESPACE
+QT_DAEMON_END_NAMESPACE
 
-#endif // DAEMONBACKEND_LINUX_H
+#endif // DAEMONBACKEND_WIN_H

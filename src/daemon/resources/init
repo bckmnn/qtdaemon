@@ -1,6 +1,6 @@
 #!/bin/bash
 ### BEGIN INIT INFO
-# Provides:          %%EXECUTABLE%%
+# Provides:          %%DAEMON%%
 # Required-Start:    $local_fs $syslog dbus
 # Required-Stop:     $local_fs $syslog dbus
 # Default-Start:     2 3 4 5
@@ -13,25 +13,26 @@ HELP_TEXT="Usage: $0 {start|stop|restart|uninstall|force-reload|status|help}"
 
 case "$1" in
     start)
-       %%DAEMON%% --start %%ARGUMENTS%%
+       %%CONTROLLER%% --start
        ;;
     stop)
-       %%DAEMON%% --stop
+       %%CONTROLLER%% --stop
        ;;
     force-reload) # Just fall through
        ;&
     restart)
-       %%DAEMON%% --stop
-       %%DAEMON%% --start %%ARGUMENTS%%
+       %%CONTROLLER%% --stop
+       %%CONTROLLER%% --start
        ;;
     uninstall)
-       %%DAEMON%% --uninstall --initd-prefix=%%INITD_PREFIX%% --dbus-prefix=%%DBUS_PREFIX%%
+       %%CONTROLLER%% --uninstall
        ;;
     status)
-       %%DAEMON%% --status
+       %%CONTROLLER%% --status
        ;;
     help)
        echo $HELP_TEXT
+       %%CONTROLLER%% --help
        ;;
     *)
        echo "Unrecognised option. "$HELP_TEXT

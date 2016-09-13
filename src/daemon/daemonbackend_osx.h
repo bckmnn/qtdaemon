@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 Konstantin Shegunov <kshegunov@gmail.com>
+** Copyright (C) 2016 Samuel Gaist <samuel.gaist@edeltech.ch>
 **
 ** This file is part of the QtDaemon library.
 **
@@ -37,40 +37,29 @@
 // We mean it.
 //
 
-#ifndef CONTROLLERBACKEND_WIN_H
-#define CONTROLLERBACKEND_WIN_H
+#ifndef DAEMONBACKEND_OSX_H
+#define DAEMONBACKEND_OSX_H
 
 #include "QtDaemon/qabstractdaemonbackend.h"
 
-#include <QtCore/qcommandlineoption.h>
+#include <QtCore/qobject.h>
 
-// #ifndef UNICODE
-// #error Enable unicode support for your compiler.
-// #endif
-
-QT_BEGIN_NAMESPACE
+QT_DAEMON_BEGIN_NAMESPACE
 
 namespace QtDaemon
 {
-    class Q_DAEMON_LOCAL ControllerBackendWindows : public QAbstractControllerBackend
+    class Q_DAEMON_LOCAL DaemonBackendOSX : public QAbstractDaemonBackend
     {
-        Q_DISABLE_COPY(ControllerBackendWindows)
+        Q_DISABLE_COPY(DaemonBackendOSX)
 
     public:
-        ControllerBackendWindows(QCommandLineParser &, bool);
+        DaemonBackendOSX(QCommandLineParser &);
+        ~DaemonBackendOSX() Q_DECL_OVERRIDE;
 
-        bool start() Q_DECL_OVERRIDE;
-        bool stop() Q_DECL_OVERRIDE;
-        bool install() Q_DECL_OVERRIDE;
-        bool uninstall() Q_DECL_OVERRIDE;
-        DaemonStatus status() Q_DECL_OVERRIDE;
-
-    private:
-        const QCommandLineOption updatePathOption;
+        int exec() Q_DECL_OVERRIDE;
     };
 }
 
-QT_END_NAMESPACE
+QT_DAEMON_END_NAMESPACE
 
-#endif // CONTROLLERBACKEND_WIN_H
-
+#endif // DAEMONBACKEND_OSX_H

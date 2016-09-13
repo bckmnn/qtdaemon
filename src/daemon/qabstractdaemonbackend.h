@@ -37,38 +37,63 @@
 // We mean it.
 //
 
-#ifndef QDAEMONCONTROLLER_P_H
-#define QDAEMONCONTROLLER_P_H
+#ifndef QABSTRACTDAEMONBACKEND_H
+#define QABSTRACTDAEMONBACKEND_H
 
 #include "QtDaemon/qdaemon-global.h"
 
-#include <QtCore/qhash.h>
-#include <QtCore/qvariant.h>
+#include <QtCore/qstringlist.h>
+#include <QtCore/qcommandlineoption.h>
 
 QT_BEGIN_NAMESPACE
-
-// TOOD: [END]
-
-class QDaemonController;
-class Q_DAEMON_EXPORT QDaemonControllerPrivate
-{
-    Q_DECLARE_PUBLIC(QDaemonController)
-
-public:
-    QDaemonControllerPrivate(QDaemonController *);
-
-    bool start();
-    bool stop();
-    bool install();
-    bool uninstall();
-
-    QtDaemon::DaemonStatus status();
-
-private:
-    QDaemonController * q_ptr;
-    QHash<QtDaemon::ControllerOption, QVariant> options;
-};
-
+class QCommandLineParser;
 QT_END_NAMESPACE
 
-#endif // QDAEMONCONTROLLER_P_H
+QT_DAEMON_BEGIN_NAMESPACE
+
+class Q_DAEMON_LOCAL QAbstractDaemonBackend
+{
+    Q_DISABLE_COPY(QAbstractDaemonBackend)
+
+public:
+    static const int BackendFailed;
+
+public:
+    QAbstractDaemonBackend(QCommandLineParser &);
+    virtual ~QAbstractDaemonBackend();
+
+    virtual int exec() = 0;
+
+protected:
+    QCommandLineParser & parser;
+};
+
+class Q_DAEMON_LOCAL QAbstractControllerBackend : public QAbstractDaemonBackend
+{
+    Q_DISABLE_COPY(QAbstractControllerBackend)
+
+public:
+    QAbstractControllerBackend(QCommandLineParser &, bool);
+
+    int exec() Q_DECL_OVERRIDE;
+
+    virtual bool start() = 0;
+    virtual bool stop() = 0;
+    virtual bool install() = 0;
+    virtual bool uninstall() = 0;
+    virtual DaemonStatus status() = 0;
+
+protected:
+    bool autoQuit;
+
+    const QCommandLineOption installOption;
+    const QCommandLineOption uninstallOption;
+    const QCommandLineOption startOption;
+    const QCommandLineOption stopOption;
+    const QCommandLineOption statusOption;
+    const QCommandLineOption fakeOption;
+};
+
+QT_DAEMON_END_NAMESPACE
+
+#endif // QABSTRACTDAEMONBACKEND_H

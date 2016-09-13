@@ -37,9 +37,7 @@
 
 #include <Windows.h>
 
-QT_BEGIN_NAMESPACE
-
-using namespace QtDaemon;
+QT_DAEMON_BEGIN_NAMESPACE
 
 // -------------------------------------------------------------------------------------------------------------------------------------------------------- //
 // --- Utility classes for windows ------------------------------------------------------------------------------------------------------------------------ //
@@ -582,4 +580,4 @@ QAbstractControllerBackend::DaemonStatus ControllerBackendWindows::status()
     }
 }
 
-QT_END_NAMESPACE
+QT_DAEMON_END_NAMESPACE

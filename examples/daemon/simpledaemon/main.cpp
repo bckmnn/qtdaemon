@@ -30,6 +30,8 @@
 
 #include "simpledaemon.h"
 
+using namespace QtDaemon;
+
 int main(int argc, char ** argv)
 {
     QDaemonApplication app(argc, argv);

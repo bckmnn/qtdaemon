@@ -1,8 +1,8 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 Konstantin Shegunov <kshegunov@gmail.com>
+** Copyright (C) 2016 Samuel Gaist <samuel.gaist@edeltech.ch>
 **
-** This file is part of the QtDaemon library.
+** This file is part of the QDaemon library.
 **
 ** The MIT License (MIT)
 **
@@ -26,58 +26,29 @@
 **
 ****************************************************************************/
 
-//
-//  W A R N I N G
-//  -------------
-//
-// This file is not part of the QtDaemon API. It exists only
-// as an implementation detail. This header file may change from
-// version to version without notice, or even be removed.
-//
-// We mean it.
-//
-
-#ifndef QDAEMONAPPLICATION_P_H
-#define QDAEMONAPPLICATION_P_H
-
-#include "qdaemon-global.h"
-#include "qdaemonlog.h"
+#include "daemonbackend_osx.h"
+#include "qdaemonapplication.h"
 
 #include <QtCore/qcommandlineparser.h>
-#include <QtCore/qcommandlineoption.h>
 
-QT_BEGIN_NAMESPACE
+QT_DAEMON_BEGIN_NAMESPACE
 
-namespace QtDaemon
+DaemonBackendOSX::DaemonBackendOSX(QCommandLineParser & arguments)
+    : QAbstractDaemonBackend(arguments)
 {
-    class QAbstractDaemonBackend;
 }
 
-class QDaemonApplication;
-class Q_DAEMON_EXPORT QDaemonApplicationPrivate
+DaemonBackendOSX::~DaemonBackendOSX()
 {
-    Q_DECLARE_PUBLIC(QDaemonApplication)
-public:
-    QDaemonApplicationPrivate(QDaemonApplication *);
-    ~QDaemonApplicationPrivate();
+}
 
-private:
-    int exec();
+int DaemonBackendOSX::exec()
+{
+    QStringList arguments = parser.positionalArguments();
+    arguments.prepend(QDaemonApplication::applicationFilePath());
 
-    static void processSignalHandler(int);
+    QMetaObject::invokeMethod(qApp, "daemonized", Qt::QueuedConnection, Q_ARG(QStringList, arguments));
+    return QCoreApplication::exec();
+}
 
-private:
-    QtDaemon::QAbstractDaemonBackend * createBackend(bool);
-
-private:
-    QDaemonApplication * q_ptr;
-    QDaemonLog log;
-    bool autoQuit;
-    QCommandLineParser parser;
-
-    static QString description;
-};
-
-QT_END_NAMESPACE
-
-#endif // QDAEMONAPPLICATION_P_H
+QT_DAEMON_END_NAMESPACE

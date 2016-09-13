@@ -37,43 +37,44 @@
 // We mean it.
 //
 
-#ifndef CONTROLLERBACKEND_LINUX_H
-#define CONTROLLERBACKEND_LINUX_H
+#ifndef QDAEMONAPPLICATION_P_H
+#define QDAEMONAPPLICATION_P_H
 
-#include "QtDaemon/qabstractdaemonbackend.h"
+#include "qdaemon_global.h"
+#include "qdaemonlog.h"
 
-QT_BEGIN_NAMESPACE
+#include <QCommandLineParser>
+#include <QCommandLineOption>
 
-class QDBusAbstractInterface;
+QT_DAEMON_BEGIN_NAMESPACE
 
-namespace QtDaemon
+class QAbstractDaemonBackend;
+
+class QDaemonApplication;
+class Q_DAEMON_LOCAL QDaemonApplicationPrivate
 {
-    class Q_DAEMON_LOCAL ControllerBackendLinux : public QAbstractControllerBackend
-    {
-        Q_DISABLE_COPY(ControllerBackendLinux)
+    Q_DECLARE_PUBLIC(QDaemonApplication)
+public:
+    QDaemonApplicationPrivate(QDaemonApplication *);
+    ~QDaemonApplicationPrivate();
 
-    public:
-        ControllerBackendLinux(QCommandLineParser &, bool);
+private:
+    int exec();
 
-        bool start() Q_DECL_OVERRIDE;
-        bool stop() Q_DECL_OVERRIDE;
-        bool install() Q_DECL_OVERRIDE;
-        bool uninstall() Q_DECL_OVERRIDE;
-        DaemonStatus status() Q_DECL_OVERRIDE;
+    static void processSignalHandler(int);
 
-    private:
-        QDBusAbstractInterface * getDBusInterface();
+private:
+    QAbstractDaemonBackend * createBackend(bool);
 
-        const QCommandLineOption dbusPrefixOption;
-        const QCommandLineOption initdPrefixOption;
+private:
+    QDaemonApplication * q_ptr;
+    QDaemonLog log;
+    bool autoQuit;
+    QCommandLineParser parser;
 
-        static const QString initdPrefix;
-        static const QString dbusPrefix;
-        static const QString defaultInitPath;
-        static const QString defaultDBusPath;
-    };
-}
+    static QString description;
+};
 
-QT_END_NAMESPACE
+QT_DAEMON_END_NAMESPACE
 
-#endif // CONTROLLERBACKEND_LINUX_H
+#endif // QDAEMONAPPLICATION_P_H

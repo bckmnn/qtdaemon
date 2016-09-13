@@ -29,14 +29,11 @@
 #ifndef QDAEMONCONTROLLER_H
 #define QDAEMONCONTROLLER_H
 
-#include "QtDaemon/qdaemon-global.h"
+#include "QtDaemon/qdaemon_global.h"
 
-#include <QtCore/qobject.h>
+#include <QObject>
 
-QT_BEGIN_NAMESPACE
-
-class QCoreApplication;
-class QCommandLineParser;
+QT_DAEMON_BEGIN_NAMESPACE
 
 class QDaemonControllerPrivate;
 class Q_DAEMON_EXPORT QDaemonController : public QObject
@@ -46,22 +43,32 @@ class Q_DAEMON_EXPORT QDaemonController : public QObject
     Q_DISABLE_COPY(QDaemonController)
 
 public:
-    explicit QDaemonController(QCoreApplication &);
+    // TODO: Finish up the properties
+    Q_PROPERTY(QString description READ description WRITE setDescription)
+    Q_PROPERTY(QDaemonFlags flags READ flags WRITE setFlags)
+
+    explicit QDaemonController(const QString & = QString());
 
     bool start();
+    bool start(const QStringList &);
     bool stop();
-    bool install();
+    bool install(const QString &, const QStringList & = QStringList());
     bool uninstall();
 
     QtDaemon::DaemonStatus status();
 
-    void setOption(QtDaemon::ControllerOption, const QVariant &);
-    QVariant option(QtDaemon::ControllerOption) const;
+    void setDescription(const QString &);
+    QString description() const;
+
+    void setFlags(const QDaemonFlags &);
+    QDaemonFlags flags() const;
 
 private:
     QDaemonControllerPrivate * d_ptr;
 };
 
-QT_END_NAMESPACE
+
+
+QT_DAEMON_END_NAMESPACE
 
 #endif // QDAEMONCONTROLLER_H

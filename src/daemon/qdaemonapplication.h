@@ -33,7 +33,7 @@
 
 #include <QtCore/qcoreapplication.h>
 
-QT_BEGIN_NAMESPACE
+QT_DAEMON_BEGIN_NAMESPACE
 
 class QDaemonApplicationPrivate;
 class Q_DAEMON_EXPORT QDaemonApplication : public QCoreApplication
@@ -70,6 +70,6 @@ private:
     QDaemonApplicationPrivate * d_ptr;
 };
 
-QT_END_NAMESPACE
+QT_DAEMON_END_NAMESPACE
 
 #endif // QDAEMONAPPLICATION_H

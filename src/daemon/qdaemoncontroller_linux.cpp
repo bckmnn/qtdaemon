@@ -26,49 +26,34 @@
 **
 ****************************************************************************/
 
-#include "controllerbackend_linux.h"
-#include "daemonbackend_linux.h"
-#include "qdaemonapplication.h"
 #include "qdaemonlog.h"
+#include "private/qdaemoncontroller_p.h"
 
-#include <QtCore/qmetaobject.h>
-#include <QtCore/qcommandlineparser.h>
-#include <QtCore/qcommandlineoption.h>
-#include <QtCore/qtextstream.h>
-#include <QtCore/qprocess.h>
-#include <QtCore/qthread.h>
-#include <QtCore/qdir.h>
-#include <QtCore/qfile.h>
-#include <QtCore/qfileinfo.h>
-#include <QtCore/qelapsedtimer.h>
+#include <QCoreApplication>
+#include <QTextStream>
+#include <QProcess>
+#include <QThread>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QElapsedTimer>
 
-#include <QtDBus/qdbusconnection.h>
-#include <QtDBus/qdbuserror.h>
-#include <QtDBus/qdbusinterface.h>
-#include <QtDBus/qdbusreply.h>
+#include <QDBusConnection>
+#include <QDBusError>
+#include <QDBusInterface>
+#include <QDBusReply>
 
-QT_BEGIN_NAMESPACE
+QT_DAEMON_BEGIN_NAMESPACE
 
-using namespace QtDaemon;
-
-static qint32 dbusServiceTimeout = 30000;		// Up to 30 seconds
 static qint32 dbusPollTime = 1000;				// Poll each second on start
+static const QString dbusControlInterface = QStringLiteral(QT_DAEMON_DBUS_CONTROL_INTERFACE);
 
-const QString ControllerBackendLinux::initdPrefix = QStringLiteral("initd-prefix");
-const QString ControllerBackendLinux::dbusPrefix = QStringLiteral("dbus-prefix");
-const QString ControllerBackendLinux::defaultInitPath = QStringLiteral("/etc/init.d");
-const QString ControllerBackendLinux::defaultDBusPath = QStringLiteral("/etc/dbus-1/system.d");
-
-ControllerBackendLinux::ControllerBackendLinux(QCommandLineParser & parser, bool autoQuit)
-    : QAbstractControllerBackend(parser, autoQuit),
-      dbusPrefixOption(dbusPrefix, QCoreApplication::translate("main", "Sets the path for the installed dbus configuration file"), QStringLiteral("path"), defaultDBusPath),
-      initdPrefixOption(initdPrefix, QCoreApplication::translate("main", "Sets the path for the installed init.d script"), QStringLiteral("path"), defaultInitPath)
+QDaemonControllerPrivate::QDaemonControllerPrivate(const QString & name, QDaemonController * q)
+    : q_ptr(q), state(name)
 {
-    parser.addOption(dbusPrefixOption);
-    parser.addOption(initdPrefixOption);
 }
 
-bool ControllerBackendLinux::start()
+bool QDaemonControllerPrivate::start()
 {
     // Connect to the DBus infrastructure
     QDBusConnection dbus = QDBusConnection::systemBus();
@@ -77,11 +62,8 @@ bool ControllerBackendLinux::start()
         return false;
     }
 
-    // Get the service name
-    QString service = DaemonBackendLinux::serviceName();
-
     // First check if the daemon is already running
-    QScopedPointer<QDBusAbstractInterface> interface(new QDBusInterface(service, QStringLiteral("/"), QStringLiteral(Q_DAEMON_DBUS_CONTROL_INTERFACE), dbus));
+    QScopedPointer<QDBusAbstractInterface> interface(new QDBusInterface(state.service(), QStringLiteral("/"), dbusControlInterface, dbus));
     if (interface->isValid())  {
         QDBusReply<bool> reply = interface->call(QStringLiteral("isRunning"));
         if (reply.isValid() && reply.value())
@@ -93,12 +75,7 @@ bool ControllerBackendLinux::start()
     }
 
     // The daemon is (most probably) not running, so start it with the proper arguments
-    QStringList arguments = parser.positionalArguments();
-    if (arguments.size() > 0)
-        arguments.prepend(QStringLiteral("--"));
-    arguments.prepend(QStringLiteral("-d"));
-
-    if (!QProcess::startDetached(QDaemonApplication::applicationFilePath(), arguments, QDaemonApplication::applicationDirPath()))  {
+    if (!QProcess::startDetached(state.path(), state.arguments(), state.directory()))  {
         qDaemonLog(QStringLiteral("The daemon failed to start."), QDaemonLog::ErrorEntry);
         return false;
     }
@@ -108,8 +85,8 @@ bool ControllerBackendLinux::start()
     dbusTimeoutTimer.start();
 
     // Give the daemon some seconds to start its DBus service
-    while (!dbusTimeoutTimer.hasExpired(dbusServiceTimeout))  {
-        interface.reset(new QDBusInterface(service, QStringLiteral("/"), QStringLiteral(Q_DAEMON_DBUS_CONTROL_INTERFACE), dbus));
+    while (!dbusTimeoutTimer.hasExpired(state.dbusTimeout()))  {
+        interface.reset(new QDBusInterface(state.service(), QStringLiteral("/"), QStringLiteral(QT_DAEMON_DBUS_CONTROL_INTERFACE), dbus));
         if (interface->isValid())
             break;
 
@@ -128,11 +105,10 @@ bool ControllerBackendLinux::start()
         return false;
     }
 
-    QMetaObject::invokeMethod(qApp, "started", Qt::QueuedConnection);
     return true;
 }
 
-bool ControllerBackendLinux::stop()
+bool QDaemonControllerPrivate::stop()
 {
     // Connect to the DBus infrastructure
     QDBusConnection dbus = QDBusConnection::systemBus();
@@ -141,11 +117,8 @@ bool ControllerBackendLinux::stop()
         return false;
     }
 
-    // Get the service name
-    QString service = DaemonBackendLinux::serviceName();
-
     // Acquire the DBus interface
-    QScopedPointer<QDBusAbstractInterface> interface(new QDBusInterface(service, QStringLiteral("/"), QStringLiteral(Q_DAEMON_DBUS_CONTROL_INTERFACE), dbus));
+    QScopedPointer<QDBusAbstractInterface> interface(new QDBusInterface(state.service(), QStringLiteral("/"), dbusControlInterface, dbus));
     if (!interface->isValid())  {
         qDaemonLog(QStringLiteral("Couldn't acquire the DBus interface. Is the daemon running? (%1)").arg(dbus.lastError().message()), QDaemonLog::ErrorEntry);
         return false;
@@ -157,30 +130,21 @@ bool ControllerBackendLinux::stop()
         return false;
     }
 
-    QMetaObject::invokeMethod(qApp, "stopped", Qt::QueuedConnection);
     return true;
 }
 
-bool ControllerBackendLinux::install()
+bool QDaemonControllerPrivate::install(const QString & executablePath, const QStringList & arguments)
 {
-    QFileInfo applicationInfo(QDaemonApplication::applicationFilePath());
-    QString path = applicationInfo.absoluteFilePath(), executable = applicationInfo.fileName(), service = DaemonBackendLinux::serviceName();
-
-    QString dbusPath = parser.isSet(dbusPrefixOption) ? parser.value(dbusPrefixOption) : defaultDBusPath;
-    QString initdPath = parser.isSet(initdPrefixOption) ? parser.value(initdPrefixOption) : defaultInitPath;
-
-    // Sanity check for the paths and permissions of the provided directories
-    if (dbusPath.isEmpty() || initdPath.isEmpty())  {
-        qDaemonLog(QStringLiteral("The provided D-Bus path and/or init.d path can't be empty"), QDaemonLog::ErrorEntry);
+    if (!state.initialize(executablePath, arguments))  {
+        qDaemonLog(QStringLiteral(), QDaemonLog::ErrorEntry);
         return false;
     }
 
-    // Make those directories absolute (it matters when running uninstall)
-    dbusPath = QDir(dbusPath).absolutePath();
-    initdPath = QDir(initdPath).absolutePath();
-
-    QString dbusFilePath = QDir(dbusPath).filePath(service + QStringLiteral(".conf"));
-    QString initdFilePath = QDir(initdPath).filePath(executable);
+    QString dbusFilePath = state.dbusConfigPath(), initdFilePath = state.initdScriptPath();
+    if (dbusFilePath.isEmpty() || initdFilePath.isEmpty())  {
+        qDaemonLog(QStringLiteral("The provided D-Bus path and/or init.d is invalid"), QDaemonLog::ErrorEntry);
+        return false;
+    }
 
     QFile dbusConf(dbusFilePath), initdFile(initdFilePath);
     if (dbusConf.exists())  {
@@ -215,7 +179,7 @@ bool ControllerBackendLinux::install()
     // Read the dbus configuration, do the substitution and write to disk
     QTextStream fin(&dbusTemplate), fout(&dbusConf);
     QString data = fin.readAll();
-    data.replace(QStringLiteral("%%SERVICE_NAME%%"), service);
+    data.replace(QStringLiteral("%%SERVICE_NAME%%"), state.service());
     fout << data;
 
     if (fout.status() != QTextStream::Ok)  {
@@ -232,18 +196,15 @@ bool ControllerBackendLinux::install()
     fout.setDevice(&initdFile);
 
     // Read the init.d script, do the substitution and write to disk
-    QStringList arguments = parser.positionalArguments();
+    /*QStringList arguments = parser.positionalArguments();
     if (arguments.size() > 0)
-        arguments.prepend(QStringLiteral("--"));
+        arguments.prepend(QStringLiteral("--"));*/
 
     data = fin.readAll();
-    data.replace(QStringLiteral("%%DAEMON%%"), path)
-        .replace(QStringLiteral("%%EXECUTABLE%%"), executable)
-        .replace(QStringLiteral("%%NAME%%"), QDaemonApplication::applicationName())
-        .replace(QStringLiteral("%%DESCRIPTION%%"), QDaemonApplication::applicationDescription())
-        .replace(QStringLiteral("%%INITD_PREFIX%%"), initdPath)
-        .replace(QStringLiteral("%%DBUS_PREFIX%%"), dbusPath)
-        .replace(QStringLiteral("%%ARGUMENTS%%"), arguments.join(' '));
+    data.replace(QStringLiteral("%%CONTROLLER%%"), QCoreApplication::applicationFilePath())
+        .replace(QStringLiteral("%%DAEMON%%"), state.executable())
+        .replace(QStringLiteral("%%NAME%%"), state.name())
+        .replace(QStringLiteral("%%DESCRIPTION%%"), state.description());
     fout << data;
 
     if (fout.status() != QTextStream::Ok)
@@ -253,39 +214,27 @@ bool ControllerBackendLinux::install()
     if (!initdFile.setPermissions(QFile::WriteOwner | QFile::ExeOwner | QFile::ReadOwner | QFile::ReadGroup | QFile::ExeGroup | QFile::ReadOther | QFile::ExeOther))
         qDaemonLog(QStringLiteral("An error occured while setting the permissions for the init.d script. Installation may be broken."), QDaemonLog::WarningEntry);
 
-    QMetaObject::invokeMethod(qApp, "installed", Qt::QueuedConnection);
-    return true;
+    return state.save();
 }
 
-bool ControllerBackendLinux::uninstall()
+bool QDaemonControllerPrivate::uninstall()
 {
-    QFileInfo applicationInfo(QDaemonApplication::applicationFilePath());
-    QString executable = applicationInfo.fileName(), service = DaemonBackendLinux::serviceName();
-
-    QString dbusPath = parser.isSet(dbusPrefixOption) ? parser.value(dbusPrefixOption) : defaultDBusPath;
-    QString initdPath = parser.isSet(initdPrefixOption) ? parser.value(initdPrefixOption) : defaultInitPath;
-
-    dbusPath = QDir(dbusPath).absolutePath();
-    initdPath = QDir(initdPath).absolutePath();
-
-    QString dbusFilePath = QDir(dbusPath).filePath(service + QStringLiteral(".conf"));
-    QString initdFilePath = QDir(initdPath).filePath(executable);
+    QString dbusFilePath = state.dbusConfigPath(), initdFilePath = state.initdScriptPath();
 
     QFile dbusConf(dbusFilePath), initdFile(initdFilePath);
-    if (dbusConf.exists() && !dbusConf.remove())  {
+    if (dbusFilePath.isEmpty() || dbusConf.exists() && !dbusConf.remove())  {
         qDaemonLog(QStringLiteral("Couldn't remove the D-Bus configuration file for this service (%1).").arg(dbusFilePath), QDaemonLog::ErrorEntry);
         return false;
     }
-    if (initdFile.exists() && !initdFile.remove())  {
+    if (initdFilePath.isEmpty() || initdFile.exists() && !initdFile.remove())  {
         qDaemonLog(QStringLiteral("Couldn't remove the init.d script for this service (%1).").arg(initdFilePath), QDaemonLog::ErrorEntry);
         return false;
     }
 
-    QMetaObject::invokeMethod(qApp, "uninstalled", Qt::QueuedConnection);
     return true;
 }
 
-DaemonStatus ControllerBackendLinux::status()
+QtDaemon::DaemonStatus QDaemonControllerPrivate::status()
 {
     // Connect to the DBus infrastructure
     QDBusConnection dbus = QDBusConnection::systemBus();
@@ -294,11 +243,8 @@ DaemonStatus ControllerBackendLinux::status()
         return DaemonNotRunning;
     }
 
-    // Get the service name
-    QString service = DaemonBackendLinux::serviceName();
-
     // Acquire the DBus interface
-    QScopedPointer<QDBusAbstractInterface> interface(new QDBusInterface(service, QStringLiteral("/"), QStringLiteral(Q_DAEMON_DBUS_CONTROL_INTERFACE), dbus));
+    QScopedPointer<QDBusAbstractInterface> interface(new QDBusInterface(state.service(), QStringLiteral("/"), dbusControlInterface, dbus));
     if (!interface->isValid())
         return DaemonRunning;
 
@@ -306,4 +252,4 @@ DaemonStatus ControllerBackendLinux::status()
     return reply.isValid() && reply.value() ? DaemonRunning : DaemonNotRunning;
 }
 
-QT_END_NAMESPACE
+QT_DAEMON_END_NAMESPACE

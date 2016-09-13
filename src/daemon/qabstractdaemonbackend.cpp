@@ -30,11 +30,9 @@
 #include "qdaemonapplication.h"
 #include "qdaemonlog.h"
 
-#include <QtCore/qcommandlineparser.h>
+#include <QCommandLineParser>
 
-QT_BEGIN_NAMESPACE
-
-using namespace QtDaemon;
+QT_DAEMON_BEGIN_NAMESPACE
 
 const int QAbstractDaemonBackend::BackendFailed = -1;
 
@@ -101,4 +99,4 @@ int QAbstractControllerBackend::exec()
     return QCoreApplication::exec();
 }
 
-QT_END_NAMESPACE
+QT_DAEMON_END_NAMESPACE

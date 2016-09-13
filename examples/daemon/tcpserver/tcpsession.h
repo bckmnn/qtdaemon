@@ -51,7 +51,7 @@ signals:
     void closed();
 
 private:
-    QTcpSocket * socket;
+    QTcpSocket socket;
 };
 
 #endif // TCPSESSION_H

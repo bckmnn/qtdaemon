@@ -36,9 +36,7 @@
 
 #include <Windows.h>
 
-QT_BEGIN_NAMESPACE
-
-using namespace QtDaemon;
+QT_DAEMON_BEGIN_NAMESPACE
 
 static const qint32 serviceWaitHint = 1000;			// Just a service control sugar (1 second)
 
@@ -209,4 +207,4 @@ int DaemonBackendWindows::exec()
     return status;
 }
 
-QT_END_NAMESPACE
+QT_DAEMON_END_NAMESPACE

@@ -39,9 +39,7 @@
 #include <QtCore/qprocess.h>
 #include <QtCore/qregularexpression.h>
 
-QT_BEGIN_NAMESPACE
-
-using namespace QtDaemon;
+QT_DAEMON_BEGIN_NAMESPACE
 
 static const QString kUserAgentsPath = QStringLiteral("%1/Library/LaunchAgents"); //Per-user agents provided by the user.
 static const QString kSystemAgentsPath = QStringLiteral("/Library/LaunchAgents");    //Per-user agents provided by the administrator.
@@ -227,4 +225,4 @@ QAbstractControllerBackend::DaemonStatus ControllerBackendOSX::status()
     return status;
 }
 
-QT_END_NAMESPACE
+QT_DAEMON_END_NAMESPACE

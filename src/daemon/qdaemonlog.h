@@ -31,7 +31,7 @@
 
 #include "QtDaemon/qdaemon-global.h"
 
-QT_BEGIN_NAMESPACE
+QT_DAEMON_BEGIN_NAMESPACE
 
 class QDaemonLogPrivate;
 class Q_DAEMON_EXPORT QDaemonLog
@@ -62,6 +62,6 @@ Q_DAEMON_EXPORT QDaemonLog & qDaemonLog();
 Q_DAEMON_EXPORT void qDaemonLog(const QString & message, QDaemonLog::EntrySeverity severity = QDaemonLog::NoticeEntry);
 // ---------------------------------------------------------------------------------------------------------------------- //
 
-QT_END_NAMESPACE
+QT_DAEMON_END_NAMESPACE
 
 #endif // QDAEMONLOG_H

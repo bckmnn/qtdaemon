@@ -37,40 +37,56 @@
 // We mean it.
 //
 
-#ifndef QDAEMONLOG_P_H
-#define QDAEMONLOG_P_H
+#ifndef QDAEMONCONTROLLER_P_H
+#define QDAEMONCONTROLLER_P_H
 
-#include "qdaemonlog.h"
+/*!
+    \internal
+    \class QDaemonController
 
-#include <QtCore/qfile.h>
-#include <QtCore/qtextstream.h>
-#include <QtCore/qmutex.h>
+    Realizes the daemon controller functionality. Platform specific options can be set and retrieved with setOption() and option().
+
+    \note The following methods don't have a standard implementation and thus should be provided in a separate platform specific source file:
+    QDaemonControllerPrivate::start()
+    QDaemonControllerPrivate::stop()
+    QDaemonControllerPrivate::install()
+    QDaemonControllerPrivate::uninstall()
+    QtDaemon::DaemonStatus QDaemonControllerPrivate::status()
+
+    \fn QDaemonController::QDaemonController(const QString & name, const QString & description, QDaemonController * q);
+
+    Creates the private object for the daemon controller public object pointed by \a q with name and description given by \a name \a description respectively.
+*/
+
+#include "QtDaemon/qdaemon_global.h"
+#include "QtDaemon/private/qdaemonstate_p.h"
 
 QT_BEGIN_NAMESPACE
-
-class Q_DAEMON_EXPORT QDaemonLogPrivate
-{
-    friend class QDaemonLog;
-    friend QDaemonLog & qDaemonLog();
-    friend void qDaemonLog(const QString & message, QDaemonLog::EntrySeverity severity);
-
-public:
-    QDaemonLogPrivate();
-    ~QDaemonLogPrivate();
-
-    void write(const QString &, QDaemonLog::EntrySeverity);
-
-private:
-    QString logFilePath;
-    QFile logFile;
-    QTextStream logStream;
-    QDaemonLog::LogType logType;
-
-    QMutex streamMutex;
-
-    static QDaemonLog * logger;
-};
-
+class QVariant;
 QT_END_NAMESPACE
 
-#endif // QDAEMONLOG_P_H
+QT_DAEMON_BEGIN_NAMESPACE
+
+class QDaemonController;
+class Q_DAEMON_EXPORT QDaemonControllerPrivate
+{
+    Q_DECLARE_PUBLIC(QDaemonController)
+
+public:
+    QDaemonControllerPrivate(const QString &, QDaemonController *);
+
+    bool start();
+    bool stop();
+    bool install(const QString &, const QStringList &);
+    bool uninstall();
+
+    QtDaemon::DaemonStatus status();
+
+private:
+    QDaemonController * q_ptr;
+    QDaemonState state;
+};
+
+QT_DAEMON_END_NAMESPACE
+
+#endif // QDAEMONCONTROLLER_P_H

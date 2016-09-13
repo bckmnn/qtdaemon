@@ -37,64 +37,40 @@
 // We mean it.
 //
 
-#ifndef QABSTRACTDAEMONBACKEND_H
-#define QABSTRACTDAEMONBACKEND_H
+#ifndef QDAEMONLOG_P_H
+#define QDAEMONLOG_P_H
 
-#include "QtDaemon/qdaemon-global.h"
+#include "qdaemonlog.h"
 
-#include <QtCore/qstringlist.h>
-#include <QtCore/qcommandlineoption.h>
+#include <QFile>
+#include <QTextStream>
+#include <QMutex>
 
-QT_BEGIN_NAMESPACE
+QT_DAEMON_BEGIN_NAMESPACE
 
-class QCommandLineParser;
-
-namespace QtDaemon
+class Q_DAEMON_LOCAL QDaemonLogPrivate
 {
-    class Q_DAEMON_LOCAL QAbstractDaemonBackend
-    {
-        Q_DISABLE_COPY(QAbstractDaemonBackend)
+    friend class QDaemonLog;
+    friend QDaemonLog & qDaemonLog();
+    friend void qDaemonLog(const QString & message, QDaemonLog::EntrySeverity severity);
 
-    public:
-        static const int BackendFailed;
+public:
+    QDaemonLogPrivate();
+    ~QDaemonLogPrivate();
 
-    public:
-        QAbstractDaemonBackend(QCommandLineParser &);
-        virtual ~QAbstractDaemonBackend();
+    void write(const QString &, QDaemonLog::EntrySeverity);
 
-        virtual int exec() = 0;
+private:
+    QString logFilePath;
+    QFile logFile;
+    QTextStream logStream;
+    QDaemonLog::LogType logType;
 
-    protected:
-        QCommandLineParser & parser;
-    };
+    QMutex streamMutex;
 
-    class Q_DAEMON_LOCAL QAbstractControllerBackend : public QAbstractDaemonBackend
-    {
-        Q_DISABLE_COPY(QAbstractControllerBackend)
+    static QDaemonLog * logger;
+};
 
-    public:
-        QAbstractControllerBackend(QCommandLineParser &, bool);
+QT_DAEMON_END_NAMESPACE
 
-        int exec() Q_DECL_OVERRIDE;
-
-        virtual bool start() = 0;
-        virtual bool stop() = 0;
-        virtual bool install() = 0;
-        virtual bool uninstall() = 0;
-        virtual DaemonStatus status() = 0;
-
-    protected:
-        bool autoQuit;
-
-        const QCommandLineOption installOption;
-        const QCommandLineOption uninstallOption;
-        const QCommandLineOption startOption;
-        const QCommandLineOption stopOption;
-        const QCommandLineOption statusOption;
-        const QCommandLineOption fakeOption;
-    };
-}
-
-QT_END_NAMESPACE
-
-#endif // QABSTRACTDAEMONBACKEND_H
+#endif // QDAEMONLOG_P_H

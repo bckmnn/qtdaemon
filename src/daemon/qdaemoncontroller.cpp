@@ -27,60 +27,106 @@
 ****************************************************************************/
 
 #include "qdaemoncontroller.h"
-#include "private/qdaemoncontroller_p.h"
+#include "qdaemoncontroller_p.h"
+#include "qdaemonlog_p.h"
 
-#include <QtCore/qcoreapplication.h>
-#include <QtCore/qcommandlineparser.h>
+#include <QCoreApplication>
 
-QT_BEGIN_NAMESPACE
+QT_DAEMON_BEGIN_NAMESPACE
 
-using namespace QtDaemon;
-
-QDaemonController::QDaemonController(QCoreApplication & app)
-    : QObject(&app), d_ptr(new QDaemonControllerPrivate(this))
+/*!
+    Starts the daemon
+*/
+QDaemonController::QDaemonController(const QString & name)
+    : QObject(qApp), d_ptr(new QDaemonControllerPrivate(name, this))
 {
 }
 
+/*!
+    Starts the daemon with the command line arguments that were specified when it was installed.
+*/
 bool QDaemonController::start()
 {
     Q_D(QDaemonController);
     return d->start();
 }
 
+/*!
+    Starts the daemon with command line arguments specified by \a arguments.
+*/
+bool QDaemonController::start(const QStringList & arguments)
+{
+    Q_D(QDaemonController);
+    QDaemonState & state = d->state;
+
+    QStringList oldArguments = state.arguments();
+    state.setArguments(arguments);
+
+    bool status = d->start();
+
+    state.setArguments(oldArguments);
+    return status;
+}
+
+/*!
+    Stops the daemon.
+*/
 bool QDaemonController::stop()
 {
     Q_D(QDaemonController);
     return d->stop();
 }
 
-bool QDaemonController::install()
+/*!
+    Install the executable located at \a path as a daemon with command line arguments
+    given by \a arguments.
+*/
+bool QDaemonController::install(const QString & path, const QStringList & arguments)
 {
     Q_D(QDaemonController);
-    return d->install();
+    return d->install(path, arguments);
 }
 
+/*!
+    Uninstall the daemon.
+*/
 bool QDaemonController::uninstall()
 {
     Q_D(QDaemonController);
     return d->uninstall();
 }
 
+/*!
+    Returns the daemon status.
+*/
 QtDaemon::DaemonStatus QDaemonController::status()
 {
     Q_D(QDaemonController);
     return d->status();
 }
 
-void QDaemonController::setOption(ControllerOption opt, const QVariant & value)
+void QDaemonController::setDescription(const QString & description)
 {
-    Q_D(QDaemonController);
-    d->options.insert(opt, value);
+    d_func()->state.setDescription(description);
 }
 
-QVariant QDaemonController::option(ControllerOption opt) const
+QString QDaemonController::description() const
 {
-    Q_D(const QDaemonController);
-    return d->options.value(opt);
+    return d_func()->state.description();
 }
 
-QT_END_NAMESPACE
+void QDaemonController::setFlags(const QDaemonFlags & flags)
+{
+    d_func()->state.setFlags(flags);
+}
+
+QDaemonFlags QDaemonController::flags() const
+{
+    return d_func()->state.flags();
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
+
+
+QT_DAEMON_END_NAMESPACE
