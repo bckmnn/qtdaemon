@@ -45,9 +45,6 @@
 #include <QHash>
 #include <QVariant>
 
-#define QT_DAEMON_DBUS_CONTROL_INTERFACE "io.qt.QtDaemon.Control"
-#define QT_DAEMON_DBUS_INTERFACE_KEY     "D-Bus Interface"
-
 QT_DAEMON_BEGIN_NAMESPACE
 
 class QDaemonState

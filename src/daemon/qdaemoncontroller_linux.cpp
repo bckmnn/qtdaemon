@@ -27,26 +27,17 @@
 ****************************************************************************/
 
 #include "qdaemonlog.h"
-#include "private/qdaemoncontroller_p.h"
+#include "QtDaemon/private/qdaemoncontroller_p.h"
+#include "QtDaemon/private/qdaemondbusinterface_p.h"
 
 #include <QCoreApplication>
 #include <QTextStream>
 #include <QProcess>
-#include <QThread>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QElapsedTimer>
-
-#include <QDBusConnection>
-#include <QDBusError>
-#include <QDBusInterface>
-#include <QDBusReply>
 
 QT_DAEMON_BEGIN_NAMESPACE
-
-static qint32 dbusPollTime = 1000;				// Poll each second on start
-static const QString dbusControlInterface = QStringLiteral(QT_DAEMON_DBUS_CONTROL_INTERFACE);
 
 QDaemonControllerPrivate::QDaemonControllerPrivate(const QString & name, QDaemonController * q)
     : q_ptr(q), state(name)
@@ -55,17 +46,9 @@ QDaemonControllerPrivate::QDaemonControllerPrivate(const QString & name, QDaemon
 
 bool QDaemonControllerPrivate::start()
 {
-    // Connect to the DBus infrastructure
-    QDBusConnection dbus = QDBusConnection::systemBus();
-    if (!dbus.isConnected())  {
-        qDaemonLog(QStringLiteral("Can't connect to the DBus system bus (%1)").arg(dbus.lastError().message()), QDaemonLog::ErrorEntry);
-        return false;
-    }
-
-    // First check if the daemon is already running
-    QScopedPointer<QDBusAbstractInterface> interface(new QDBusInterface(state.service(), QStringLiteral("/"), dbusControlInterface, dbus));
-    if (interface->isValid())  {
-        QDBusReply<bool> reply = interface->call(QStringLiteral("isRunning"));
+    QDaemonDBusInterface dbus(state.service());
+    if (dbus.open())  {
+        QDBusReply<bool> reply = dbus.call<bool>(QStringLiteral("isRunning"));
         if (reply.isValid() && reply.value())
             qDaemonLog(QStringLiteral("The daemon is already running."), QDaemonLog::NoticeEntry);
         else
@@ -81,56 +64,26 @@ bool QDaemonControllerPrivate::start()
     }
 
     // Repeat the call to make sure the communication is ok
-    QElapsedTimer dbusTimeoutTimer;
-    dbusTimeoutTimer.start();
-
-    // Give the daemon some seconds to start its DBus service
-    while (!dbusTimeoutTimer.hasExpired(state.dbusTimeout()))  {
-        interface.reset(new QDBusInterface(state.service(), QStringLiteral("/"), QStringLiteral(QT_DAEMON_DBUS_CONTROL_INTERFACE), dbus));
-        if (interface->isValid())
-            break;
-
-        QThread::msleep(dbusPollTime);	// Wait some time before retrying
-    }
-
-    // Check the DBus status
-    if (!interface)  {
-        qDaemonLog(QStringLiteral("Connection with the daemon couldn't be established. (%1)").arg(dbus.lastError().message()), QDaemonLog::ErrorEntry);
+    dbus.setTimeout(state.dbusTimeout());
+    if (!dbus.open(QDaemonDBusInterface::AutoRetryFlag))  {
+        qDaemonLog(QStringLiteral("Connection with the daemon couldn't be established. (%1)").arg(dbus.error()), QDaemonLog::ErrorEntry);
         return false;
     }
 
-    QDBusReply<bool> reply = interface->call(QStringLiteral("isRunning"));
-    if (!reply.isValid() || !reply.value())  {
-        qDaemonLog(QStringLiteral("The acquired DBus interface replied erroneously. (%1)").arg(dbus.lastError().message()), QDaemonLog::ErrorEntry);
-        return false;
-    }
-
-    return true;
+    QDBusReply<bool> reply = dbus.call<bool>(QStringLiteral("isRunning"));
+    return reply.isValid() && reply.value();
 }
 
 bool QDaemonControllerPrivate::stop()
 {
-    // Connect to the DBus infrastructure
-    QDBusConnection dbus = QDBusConnection::systemBus();
-    if (!dbus.isConnected())  {
-        qDaemonLog(QStringLiteral("Can't connect to the DBus system bus (%1)").arg(dbus.lastError().message()), QDaemonLog::ErrorEntry);
+    QDaemonDBusInterface dbus(state.service());
+    if (!dbus.open())  {
+        qDaemonLog(QStringLiteral("Couldn't acquire the DBus interface. Is the daemon running? (%1)").arg(dbus.error()), QDaemonLog::ErrorEntry);
         return false;
     }
 
-    // Acquire the DBus interface
-    QScopedPointer<QDBusAbstractInterface> interface(new QDBusInterface(state.service(), QStringLiteral("/"), dbusControlInterface, dbus));
-    if (!interface->isValid())  {
-        qDaemonLog(QStringLiteral("Couldn't acquire the DBus interface. Is the daemon running? (%1)").arg(dbus.lastError().message()), QDaemonLog::ErrorEntry);
-        return false;
-    }
-
-    QDBusReply<bool> reply = interface->call(QStringLiteral("stop"));
-    if (!reply.isValid() || !reply.value())  {
-        qDaemonLog(QStringLiteral("The acquired DBus interface replied erroneously. (%1)").arg(dbus.lastError().message()), QDaemonLog::ErrorEntry);
-        return false;
-    }
-
-    return true;
+    QDBusReply<bool> reply = dbus.call<bool>(QStringLiteral("stop"));
+    return reply.isValid() && reply.value();
 }
 
 bool QDaemonControllerPrivate::install(const QString & executablePath, const QStringList & arguments)
@@ -236,19 +189,11 @@ bool QDaemonControllerPrivate::uninstall()
 
 QtDaemon::DaemonStatus QDaemonControllerPrivate::status()
 {
-    // Connect to the DBus infrastructure
-    QDBusConnection dbus = QDBusConnection::systemBus();
-    if (!dbus.isConnected())  {
-        qDaemonLog(QStringLiteral("Can't connect to the DBus system bus (%1)").arg(dbus.lastError().message()), QDaemonLog::ErrorEntry);
+    QDaemonDBusInterface dbus(state.service());
+    if (!dbus.open())
         return DaemonNotRunning;
-    }
 
-    // Acquire the DBus interface
-    QScopedPointer<QDBusAbstractInterface> interface(new QDBusInterface(state.service(), QStringLiteral("/"), dbusControlInterface, dbus));
-    if (!interface->isValid())
-        return DaemonRunning;
-
-    QDBusReply<bool> reply = interface->call(QStringLiteral("isRunning"));
+    QDBusReply<bool> reply = dbus.call<bool>(QStringLiteral("isRunning"));
     return reply.isValid() && reply.value() ? DaemonRunning : DaemonNotRunning;
 }
 

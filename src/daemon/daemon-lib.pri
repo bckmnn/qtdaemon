@@ -12,7 +12,8 @@ SOURCES += \
     $$PWD/qdaemoncontroller.cpp \
     $$PWD/qabstractdaemonbackend.cpp \
     $$PWD/qdaemonstate.cpp \
-    $$PWD/qdaemoncontroller_linux.cpp
+    $$PWD/qdaemoncontroller_linux.cpp \
+    $$PWD/qdaemondbusinterface.cpp
 
 PUBLIC_HEADERS += \
     $$PWD/qdaemon_global.h \
@@ -26,7 +27,8 @@ PRIVATE_HEADERS += \
     $$PWD/qdaemonlog_p.h \
     $$PWD/qdaemoncontroller_p.h \
     $$PWD/qdaemon_common_p.h \
-    $$PWD/qdaemonstate_p.h
+    $$PWD/qdaemonstate_p.h \
+    $$PWD/qdaemondbusinterface_p.h
 
 unix:RESOURCES += qdaemon.qrc
 

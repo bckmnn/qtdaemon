@@ -105,6 +105,9 @@ QtDaemon::DaemonStatus QDaemonController::status()
     return d->status();
 }
 
+/*!
+    Daemon Description
+*/
 void QDaemonController::setDescription(const QString & description)
 {
     d_func()->state.setDescription(description);
@@ -115,6 +118,9 @@ QString QDaemonController::description() const
     return d_func()->state.description();
 }
 
+/*!
+    Daemon flags
+*/
 void QDaemonController::setFlags(const QDaemonFlags & flags)
 {
     d_func()->state.setFlags(flags);
@@ -124,9 +130,5 @@ QDaemonFlags QDaemonController::flags() const
 {
     return d_func()->state.flags();
 }
-
-// ---------------------------------------------------------------------------------------------------------------------------------------------------------- //
-
-
 
 QT_DAEMON_END_NAMESPACE

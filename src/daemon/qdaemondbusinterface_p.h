@@ -37,52 +37,79 @@
 // We mean it.
 //
 
-#ifndef QDAEMONCONTROLLER_P_H
-#define QDAEMONCONTROLLER_P_H
+#ifndef QDAEMONDBUSINTERFACE_P_H
+#define QDAEMONDBUSINTERFACE_P_H
 
-/*!
-    \internal
-    \class QDaemonController
+#include "QtDaemon/qdaemon-global.h"
 
-    Realizes the daemon controller functionality. Platform specific options can be set and retrieved with setOption() and option().
+#include <QObject>
 
-    \note The following methods don't have a standard implementation and thus should be provided in a separate platform specific source file:
-    QDaemonControllerPrivate::start()
-    QDaemonControllerPrivate::stop()
-    QDaemonControllerPrivate::install()
-    QDaemonControllerPrivate::uninstall()
-    QtDaemon::DaemonStatus QDaemonControllerPrivate::status()
+#include <QDBusConnection>
+#include <QDBusAbstractInterface>
+#include <QDBusReply>
 
-    \fn QDaemonController::QDaemonController(const QString & name, const QString & description, QDaemonController * q);
+QT_BEGIN_NAMESPACE
+class QDBusAbstractInterface;
+QT_END_NAMESPACE
 
-    Creates the private object for the daemon controller public object pointed by \a q with name and description given by \a name \a description respectively.
-*/
-
-#include "QtDaemon/qdaemon_global.h"
-#include "QtDaemon/private/qdaemonstate_p.h"
+#define QT_DAEMON_DBUS_INTERFACE_KEY     "D-Bus Interface"
 
 QT_DAEMON_BEGIN_NAMESPACE
 
-class QDaemonController;
-class Q_DAEMON_EXPORT QDaemonControllerPrivate
+class Q_DAEMON_LOCAL QDaemonDBusInterface : public QObject
 {
-    Q_DECLARE_PUBLIC(QDaemonController)
-
 public:
-    QDaemonControllerPrivate(const QString &, QDaemonController *);
+    enum OpenFlag  {
+        NoRetryFlag = 0x1,
+        AutoRetryFlag = 0x3
+    };
+    Q_DECLARE_FLAGS(OpenFlags, OpenFlag)
 
-    bool start();
-    bool stop();
-    bool install(const QString &, const QStringList &);
-    bool uninstall();
+    QDaemonDBusInterface(const QString &);
+    ~QDaemonDBusInterface() Q_DECL_OVERRIDE;
 
-    QtDaemon::DaemonStatus status();
+    bool open(const OpenFlags & = NoRetryFlag);
+    void close();
+    bool isValid() const;
+
+    template <class T>
+    QDBusReply<T> call(const QString &);
+
+    void setTimeout(qint32);
+    qint32 timeout();
+
+    QString error() const;
 
 private:
-    QDaemonController * q_ptr;
-    QDaemonState state;
+    QString service;
+    qint32 dbusTimeout;
+    QDBusConnection dbus;
+    QScopedPointer<QDBusAbstractInterface> interface;
+
+    static const QString controlInterface, objectPath;
 };
+Q_DECLARE_OPERATORS_FOR_FLAGS(QDaemonDBusInterface::OpenFlags)
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
+template <class T>
+inline QDBusReply<T> QDaemonDBusInterface::call(const QString & method)
+{
+    return interface.isNull() || !interface->isValid() ? QDBusReply<T>() : interface->call(method);
+}
+
+inline void QDaemonDBusInterface::setTimeout(qint32 timeout)
+{
+    dbusTimeout = timeout;
+}
+
+inline qint32 QDaemonDBusInterface::timeout()
+{
+    return dbusTimeout;
+}
+
+
 
 QT_DAEMON_END_NAMESPACE
 
-#endif // QDAEMONCONTROLLER_P_H
+#endif // QDAEMONDBUSINTERFACE_P_H
