@@ -37,9 +37,68 @@
 
 QT_DAEMON_BEGIN_NAMESPACE
 
-static const qint32 dbusPollTime = 1000;				// Poll each second on start
+QDaemonDBusInterfaceProvider::QDaemonDBusInterfaceProvider(QObject * parent)
+    : QObject(parent), dbus(QDBusConnection::systemBus())
+{
+    if (!dbus.isConnected())
+        qDaemonLog(QStringLiteral("Can't connect to the D-Bus system bus: %1").arg(dbus.lastError().message()), QDaemonLog::ErrorEntry);
+}
 
-const QString QDaemonDBusInterface::controlInterface = QStringLiteral("io.qt.QtDaemon.Control");
+QDaemonDBusInterfaceProvider::~QDaemonDBusInterfaceProvider()
+{
+    stop();
+}
+
+bool QDaemonDBusInterfaceProvider::create(const QString & serviceName)
+{
+    if (!dbus.isConnected())
+        return false;
+
+    // Register the service
+    if (!dbus.registerService(serviceName))  {
+        qDaemonLog(QStringLiteral("Couldn't register a service with the D-Bus system bus: %1").arg(dbus.lastError().message()), QDaemonLog::ErrorEntry);
+        return false;
+    }
+
+    // Register the object
+    if (!dbus.registerObject(QStringLiteral("/"), this, QDBusConnection::ExportAllInvokables))  {
+        qDaemonLog(QStringLiteral("Couldn't register an object with the D-Bus system bus. (%1)").arg(dbus.lastError().message()), QDaemonLog::ErrorEntry);
+        return false;
+    }
+
+    service = serviceName;
+
+    return true;
+}
+
+void QDaemonDBusInterfaceProvider::destroy()
+{
+    if (service.isEmpty())
+        return;
+
+    // Unregister the object
+    dbus.unregisterObject(QStringLiteral("/"));
+
+    // Unregister the service
+    if (!dbus.unregisterService(service))
+        qDaemonLog(QStringLiteral("Can't unregister service from D-bus. (%1)").arg(dbus.lastError().message()), QDaemonLog::WarningEntry);
+}
+
+bool QDaemonDBusInterfaceProvider::isRunning() const
+{
+    return true;	// This is just for notifying the controlling process. The function is invoked over D-Bus only.
+}
+
+bool QDaemonDBusInterfaceProvider::stop()
+{
+    qApp->quit();	// This is just to respond to the controlling process. The function is invoked over D-Bus only.
+    return true;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
+static const qint32 dbusPollTime = 1000;				// Poll each second on start
+const QString QDaemonDBusInterface::controlInterface = QStringLiteral(Q_DAEMON_DBUS_CONTROL_INTERFACE);
 const QString QDaemonDBusInterface::objectPath = QStringLiteral("/");
 
 QDaemonDBusInterface::QDaemonDBusInterface(const QString & serviceName)

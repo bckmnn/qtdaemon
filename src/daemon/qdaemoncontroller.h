@@ -47,7 +47,7 @@ public:
     Q_PROPERTY(QString description READ description WRITE setDescription)
     Q_PROPERTY(QDaemonFlags flags READ flags WRITE setFlags)
 
-    explicit QDaemonController(const QString & = QString());
+    explicit QDaemonController(const QString &);
 
     bool start();
     bool start(const QStringList &);

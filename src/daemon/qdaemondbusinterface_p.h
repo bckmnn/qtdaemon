@@ -53,10 +53,33 @@ class QDBusAbstractInterface;
 QT_END_NAMESPACE
 
 #define QT_DAEMON_DBUS_INTERFACE_KEY     "D-Bus Interface"
+#define Q_DAEMON_DBUS_CONTROL_INTERFACE  "io.qt.QtDaemon.Control"
 
 QT_DAEMON_BEGIN_NAMESPACE
 
-class Q_DAEMON_LOCAL QDaemonDBusInterface : public QObject
+class QDaemonDBusInterfaceProvider : public QObject
+{
+    Q_OBJECT
+    Q_DISABLE_COPY(QDaemonDBusInterfaceProvider)
+    Q_CLASSINFO(QT_DAEMON_DBUS_INTERFACE_KEY, Q_DAEMON_DBUS_CONTROL_INTERFACE)
+
+public:
+    QDaemonDBusInterfaceProvider(QObject * = Q_NULLPTR);
+    ~QDaemonDBusInterfaceProvider() Q_DECL_OVERRIDE;
+
+    bool create(const QString &);
+    void destroy();
+
+    Q_INVOKABLE bool isRunning() const;
+    Q_INVOKABLE bool stop();
+
+private:
+    QString service;
+    QDBusConnection dbus;
+
+};
+
+class Q_DAEMON_LOCAL QDaemonDBusInterface
 {
 public:
     enum OpenFlag  {
@@ -66,7 +89,7 @@ public:
     Q_DECLARE_FLAGS(OpenFlags, OpenFlag)
 
     QDaemonDBusInterface(const QString &);
-    ~QDaemonDBusInterface() Q_DECL_OVERRIDE;
+    ~QDaemonDBusInterface();
 
     bool open(const OpenFlags & = NoRetryFlag);
     void close();
@@ -107,8 +130,6 @@ inline qint32 QDaemonDBusInterface::timeout()
 {
     return dbusTimeout;
 }
-
-
 
 QT_DAEMON_END_NAMESPACE
 
