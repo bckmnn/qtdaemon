@@ -1,3 +1,3 @@
 TEMPLATE = subdirs
-SUBDIRS += simpledaemon tcpserver
+SUBDIRS += simpledaemon tcpserver customcontrol
 
