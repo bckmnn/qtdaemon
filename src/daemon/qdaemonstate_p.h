@@ -47,7 +47,7 @@
 
 QT_DAEMON_BEGIN_NAMESPACE
 
-class QDaemonState
+class Q_DAEMON_LOCAL QDaemonState
 {
 public:
     QDaemonState(const QString &);

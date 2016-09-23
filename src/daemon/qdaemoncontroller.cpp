@@ -57,6 +57,10 @@ bool QDaemonController::start()
 bool QDaemonController::start(const QStringList & arguments)
 {
     Q_D(QDaemonController);
+
+    if (arguments.isEmpty())
+        return d->start();
+
     QDaemonState & state = d->state;
 
     QStringList oldArguments = state.arguments();
@@ -129,6 +133,32 @@ void QDaemonController::setFlags(const QDaemonFlags & flags)
 QDaemonFlags QDaemonController::flags() const
 {
     return d_func()->state.flags();
+}
+
+/*!
+    initScriptPrefix property
+*/
+void QDaemonController::setInitScriptPrefix(const QString & prefix)
+{
+    d_func()->state.setInitDPrefix(prefix);
+}
+
+QString QDaemonController::initScriptPrefix() const
+{
+    return d_func()->state.initdPrefix();
+}
+
+/*!
+    dbusConfigurationPrefix property
+*/
+void QDaemonController::setDBusConfigurationPrefix(const QString & prefix)
+{
+    d_func()->state.setDBusPrefix(prefix);
+}
+
+QString QDaemonController::dbusConfigurationPrefix() const
+{
+    return d_func()->state.dbusPrefix();
 }
 
 QT_DAEMON_END_NAMESPACE

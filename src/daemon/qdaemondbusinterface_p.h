@@ -57,7 +57,7 @@ QT_END_NAMESPACE
 
 QT_DAEMON_BEGIN_NAMESPACE
 
-class QDaemonDBusInterfaceProvider : public QObject
+class Q_DAEMON_LOCAL QDaemonDBusInterfaceProvider : public QObject
 {
     Q_OBJECT
     Q_DISABLE_COPY(QDaemonDBusInterfaceProvider)

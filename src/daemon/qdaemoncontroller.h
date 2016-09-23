@@ -63,6 +63,13 @@ public:
     void setFlags(const QDaemonFlags &);
     QDaemonFlags flags() const;
 
+    // Lunux only:
+    void setInitScriptPrefix(const QString &);
+    QString initScriptPrefix() const;
+
+    void setDBusConfigurationPrefix(const QString &);
+    QString dbusConfigurationPrefix() const;
+
 private:
     QDaemonControllerPrivate * d_ptr;
 };

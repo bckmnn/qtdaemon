@@ -26,17 +26,20 @@
 **
 ****************************************************************************/
 
-#include <QDaemonApplication>
+#include <QCoreApplication>
+#include <QDaemon>
+#include <QDebug>
 
 using namespace QtDaemon;
 
 int main(int argc, char ** argv)
 {
-    QDaemonApplication app(argc, argv);
+    QCoreApplication app(argc, argv);
 
-    QDaemonApplication::setApplicationName("SimpleDaemon example");
-    QDaemonApplication::setApplicationDescription("The Simple Daemon example shows the basic requirements for creating a daemon");
-    QDaemonApplication::setOrganizationDomain("qtdaemon.examples");
+    QDaemon engine("QtDaemon Custom Control example");
+    QObject::connect(&engine, &QDaemon::ready, [] (const QStringList & args) -> void {
+        qDebug() << "Daemon running with: " << args.join(" ");
+    });
 
-    return QDaemonApplication::exec();
+    return QCoreApplication::exec();
 }

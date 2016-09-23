@@ -59,8 +59,8 @@ bool QDaemonState::initialize(const QString & exe, const QStringList & arguments
     setArguments(arguments);
 
     // Construct the service name
-    QString service;
-    d.service = service;
+    QByteArray path = d.path.toUtf8();
+    d.service = QStringLiteral("io.qt.QtDaemon.%1-%2").arg(info.fileName()).arg(qChecksum(path.data(), path.size()));
 
     return true;
 }

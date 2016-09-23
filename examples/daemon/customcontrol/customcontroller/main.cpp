@@ -26,17 +26,63 @@
 **
 ****************************************************************************/
 
-#include <QDaemonApplication>
+#include <QCoreApplication>
+#include <QTextStream>
+#include <QDir>
+#include <QCommandLineParser>
+#include <QCommandLineOption>
+#include <QDaemonController>
 
 using namespace QtDaemon;
 
 int main(int argc, char ** argv)
 {
-    QDaemonApplication app(argc, argv);
+    QCoreApplication app(argc, argv);
 
-    QDaemonApplication::setApplicationName("SimpleDaemon example");
-    QDaemonApplication::setApplicationDescription("The Simple Daemon example shows the basic requirements for creating a daemon");
-    QDaemonApplication::setOrganizationDomain("qtdaemon.examples");
+    const QCommandLineOption install(QStringLiteral("install"), QStringLiteral("Installs the daemon"), QStringLiteral("daemon executable"));
+    const QCommandLineOption uninstall(QStringLiteral("uninstall"), QStringLiteral("Uninstalls the daemon"));
+    const QCommandLineOption start(QStringLiteral("start"), QStringLiteral("Starts the daemon"));
+    const QCommandLineOption stop(QStringLiteral("stop"), QStringLiteral("Stops the daemon"));
 
-    return QDaemonApplication::exec();
+    QCommandLineParser parser;
+    parser.addOption(install);
+    parser.addOption(uninstall);
+    parser.addOption(start);
+    parser.addOption(stop);
+    parser.addHelpOption();
+
+    parser.parse(QCoreApplication::arguments());
+
+    QDaemonController controller("QtDaemon Custom Control example");
+    controller.setFlags(QtDaemon::UpdatePathFlag | QtDaemon::AgentFlag | QtDaemon::UserAgentFlag);
+    controller.setInitScriptPrefix(QStringLiteral("/home/nye/Temp/daemon/initd"));
+    controller.setDBusConfigurationPrefix(QStringLiteral("/home/nye/Temp/daemon/dbus"));
+
+    QTextStream out(stdout);
+
+    bool status = false;
+    if (parser.isSet(install))  {
+        QString executablePath = parser.value(install);     // Run with --install=../customdaemon/customdaemon
+        QFileInfo executableInfo(executablePath);
+        if (!executablePath.isEmpty() && executableInfo.isExecutable())  {
+            QStringList arguments;
+            arguments << QStringLiteral("--test-daemon") << QStringLiteral("--controller-path=\"%1\"").arg(QCoreApplication::applicationFilePath());
+
+            status = controller.install(executableInfo.absoluteFilePath(), arguments);
+        }
+        else
+            out << QStringLiteral("File %1 isn't a valid executable").arg(executablePath);
+    }
+    else if (parser.isSet(uninstall))
+        status = controller.uninstall();
+    else if (parser.isSet(start))
+        status = controller.start(parser.positionalArguments());
+    else if (parser.isSet(stop))
+        status = controller.stop();
+    else  {
+        out << parser.helpText();
+        status = true;
+    }
+
+    return status ? 0 : 1;
 }

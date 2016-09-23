@@ -8,7 +8,7 @@
 QT_DAEMON_BEGIN_NAMESPACE
 
 class QDaemonPrivate;
-class QDaemon : public QObject
+class Q_DAEMON_EXPORT QDaemon : public QObject
 {
     Q_OBJECT
     Q_DECLARE_PRIVATE(QDaemon)

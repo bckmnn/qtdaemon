@@ -46,19 +46,16 @@
 
 QT_DAEMON_BEGIN_NAMESPACE
 
-namespace QtDaemon
+class Q_DAEMON_LOCAL DaemonBackendOSX : public QAbstractDaemonBackend
 {
-    class Q_DAEMON_LOCAL DaemonBackendOSX : public QAbstractDaemonBackend
-    {
-        Q_DISABLE_COPY(DaemonBackendOSX)
+    Q_DISABLE_COPY(DaemonBackendOSX)
 
-    public:
-        DaemonBackendOSX(QCommandLineParser &);
-        ~DaemonBackendOSX() Q_DECL_OVERRIDE;
+public:
+    DaemonBackendOSX(QCommandLineParser &);
+    ~DaemonBackendOSX() Q_DECL_OVERRIDE;
 
-        int exec() Q_DECL_OVERRIDE;
-    };
-}
+    int exec() Q_DECL_OVERRIDE;
+};
 
 QT_DAEMON_END_NAMESPACE
 

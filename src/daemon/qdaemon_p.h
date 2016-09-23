@@ -8,7 +8,7 @@
 QT_DAEMON_BEGIN_NAMESPACE
 
 class QDaemon;
-class QDaemonPrivate
+class Q_DAEMON_LOCAL QDaemonPrivate
 {
     Q_DECLARE_PUBLIC(QDaemon)
 

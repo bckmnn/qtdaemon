@@ -1,11 +1,5 @@
 INCLUDEPATH += $$PWD
 
-QT = core
-
-unix:!macx  {
-    QT += dbus
-}
-
 SOURCES += \
     $$PWD/qdaemonapplication.cpp \
     $$PWD/qdaemonlog.cpp \
@@ -51,10 +45,6 @@ macx {
     PRIVATE_HEADERS += \
         $$PWD/controllerbackend_linux.h \
         $$PWD/daemonbackend_linux.h
-
-
-    target.path = /usr/lib
-    INSTALLS += target
 
     DISTFILES += \
         resources/init \

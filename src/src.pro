@@ -1,2 +1,2 @@
 TEMPLATE = subdirs
-SUBDIRS += daemon
+SUBDIRS += daemon doc

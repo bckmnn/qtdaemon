@@ -122,7 +122,7 @@ bool QDaemonDBusInterface::open(const OpenFlags & flags)
 
     // Autoretry loop
     if (flags.testFlag(AutoRetryFlag))  {
-        OpenFlags newFlags = flags & ~AutoRetryFlag | NoRetryFlag;
+        OpenFlags newFlags = (flags & ~AutoRetryFlag) | NoRetryFlag;
 
         // Repeat the call to make sure the communication is ok
         QElapsedTimer dbusTimeoutTimer;

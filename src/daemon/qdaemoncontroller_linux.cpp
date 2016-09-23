@@ -175,11 +175,11 @@ bool QDaemonControllerPrivate::uninstall()
     QString dbusFilePath = state.dbusConfigPath(), initdFilePath = state.initdScriptPath();
 
     QFile dbusConf(dbusFilePath), initdFile(initdFilePath);
-    if (dbusFilePath.isEmpty() || dbusConf.exists() && !dbusConf.remove())  {
+    if (dbusFilePath.isEmpty() || (dbusConf.exists() && !dbusConf.remove()))  {
         qDaemonLog(QStringLiteral("Couldn't remove the D-Bus configuration file for this service (%1).").arg(dbusFilePath), QDaemonLog::ErrorEntry);
         return false;
     }
-    if (initdFilePath.isEmpty() || initdFile.exists() && !initdFile.remove())  {
+    if (initdFilePath.isEmpty() || (initdFile.exists() && !initdFile.remove()))  {
         qDaemonLog(QStringLiteral("Couldn't remove the init.d script for this service (%1).").arg(initdFilePath), QDaemonLog::ErrorEntry);
         return false;
     }
