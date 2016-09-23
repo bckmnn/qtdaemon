@@ -1,11 +1,12 @@
-# Prepare the example's base path and relative include/linker path
+QMAKE_CXXFLAGS = # For some reason there's flag mixing if we don't empty this var
 
+# Prepare the example's base path and relative include/linker path
 basepath = $$relative_path($$_PRO_FILE_PWD_, $$PWD)
 basepath = $$dirname(basepath)
 
-rp = ../../..
-bpelems = $$split(basepath, /)
-for (i, bpelems): rp = $$rp/..
+#rp = ../../..
+#bpelems = $$split(basepath, /)
+#for (i, bpelems): rp = $$rp/..
 
 !isEmpty(basepath): basepath = $$basepath/
 
