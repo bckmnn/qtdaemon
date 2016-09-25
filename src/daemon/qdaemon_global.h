@@ -32,8 +32,9 @@ QT_DAEMON_BEGIN_NAMESPACE
 
 enum DaemonStatus
 {
-    DaemonRunning,
-    DaemonNotRunning
+    UnknownStatus,
+    RunningStatus,
+    NotRunningStatus
 };
 
 enum DaemonFlag
@@ -46,6 +47,9 @@ enum DaemonFlag
 };
 Q_DECLARE_FLAGS(QDaemonFlags, DaemonFlag)
 Q_DECLARE_OPERATORS_FOR_FLAGS(QDaemonFlags)
+
+QDataStream & operator << (QDataStream & out, const QDaemonFlags &);
+QDataStream & operator >> (QDataStream & in, QDaemonFlags &);
 
 QT_DAEMON_END_NAMESPACE
 

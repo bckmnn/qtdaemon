@@ -55,7 +55,9 @@ public:
     // Init and (de)serialization
     bool initialize(const QString &, const QStringList &);
     bool load();
+    bool isLoaded() const;
     bool save() const;
+    void clear();
 
     // Common
     void setPath(const QString &);
@@ -84,6 +86,7 @@ public:
     qint32 dbusTimeout() const;
 
 private:
+    bool loaded;
     struct Data
     {
         Data(const QString &);
@@ -96,6 +99,11 @@ private:
 };
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
+inline bool QDaemonState::isLoaded() const
+{
+    return loaded;
+}
 
 inline void QDaemonState::setDescription(const QString & description)
 {

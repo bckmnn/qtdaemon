@@ -73,7 +73,7 @@ public:
 
     bool start();
     bool stop();
-    bool install(const QString &, const QStringList &);
+    bool install();
     bool uninstall();
 
     QtDaemon::DaemonStatus status();

@@ -68,7 +68,6 @@ private:
 
 private:
     QDaemonApplication * q_ptr;
-    QDaemonLog log;
     bool autoQuit;
     QCommandLineParser parser;
 

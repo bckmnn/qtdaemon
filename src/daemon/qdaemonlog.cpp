@@ -79,8 +79,6 @@ QT_DAEMON_BEGIN_NAMESPACE
 QDaemonLog::QDaemonLog(QDaemonLogPrivate & d)
     : d_ptr(&d)
 {
-    Q_ASSERT(!QDaemonLogPrivate::logger);
-    QDaemonLogPrivate::logger = this;
 }
 
 /*!
@@ -88,7 +86,6 @@ QDaemonLog::QDaemonLog(QDaemonLogPrivate & d)
 */
 QDaemonLog::~QDaemonLog()
 {
-    QDaemonLogPrivate::logger = Q_NULLPTR;
     delete d_ptr;
 }
 
@@ -171,7 +168,9 @@ QDaemonLog & QDaemonLog::operator << (const QString & message)
 */
 QDaemonLog & qDaemonLog()
 {
-    Q_ASSERT(QDaemonLogPrivate::logger);
+    if (!QDaemonLogPrivate::logger)
+        QDaemonLogPrivate::logger = new QDaemonLog(*new QDaemonLogPrivate); // TODO: AaAaaAaAAa! Fix me!!!
+
     return *QDaemonLogPrivate::logger;
 }
 
@@ -185,9 +184,7 @@ QDaemonLog & qDaemonLog()
 */
 void qDaemonLog(const QString & message, QDaemonLog::EntrySeverity severity)
 {
-    Q_ASSERT(QDaemonLogPrivate::logger);
-
-    QDaemonLogPrivate * const d = QDaemonLogPrivate::logger->d_ptr;
+    QDaemonLogPrivate * const d = qDaemonLog().d_ptr;
 
     QMutexLocker lock(&d->streamMutex); // The MS compiler doesn't get anonymous objects (error C2530: references must be initialized)
     Q_UNUSED(lock);                     // Suppress warning for unused variable
@@ -197,7 +194,7 @@ void qDaemonLog(const QString & message, QDaemonLog::EntrySeverity severity)
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-QDaemonLog * QDaemonLogPrivate::logger = NULL;
+QDaemonLog * QDaemonLogPrivate::logger = Q_NULLPTR;     // TODO: Fix! This is just temporary.
 
 QDaemonLogPrivate::QDaemonLogPrivate()
     : logStream(&logFile), logType(QDaemonLog::LogToStdout)

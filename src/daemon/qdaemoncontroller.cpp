@@ -40,6 +40,7 @@ QT_DAEMON_BEGIN_NAMESPACE
 QDaemonController::QDaemonController(const QString & name)
     : QObject(qApp), d_ptr(new QDaemonControllerPrivate(name, this))
 {
+    d_ptr->state.load();
 }
 
 /*!
@@ -48,6 +49,11 @@ QDaemonController::QDaemonController(const QString & name)
 bool QDaemonController::start()
 {
     Q_D(QDaemonController);
+    if (!d->state.isLoaded())  {
+        qDaemonLog(QStringLiteral(), QDaemonLog::ErrorEntry);
+        return false;
+    }
+
     return d->start();
 }
 
@@ -57,11 +63,12 @@ bool QDaemonController::start()
 bool QDaemonController::start(const QStringList & arguments)
 {
     Q_D(QDaemonController);
-
     if (arguments.isEmpty())
         return d->start();
 
     QDaemonState & state = d->state;
+    if (!state.isLoaded())
+        return false;
 
     QStringList oldArguments = state.arguments();
     state.setArguments(arguments);
@@ -78,6 +85,11 @@ bool QDaemonController::start(const QStringList & arguments)
 bool QDaemonController::stop()
 {
     Q_D(QDaemonController);
+    if (!d->state.isLoaded())  {
+        qDaemonLog(QStringLiteral(), QDaemonLog::ErrorEntry);
+        return false;
+    }
+
     return d->stop();
 }
 
@@ -88,7 +100,17 @@ bool QDaemonController::stop()
 bool QDaemonController::install(const QString & path, const QStringList & arguments)
 {
     Q_D(QDaemonController);
-    return d->install(path, arguments);
+    if (d->state.isLoaded())  {
+        qDaemonLog(QStringLiteral(), QDaemonLog::ErrorEntry);
+        return false;
+    }
+
+    if (!d->state.initialize(path, arguments))  {
+        qDaemonLog(QStringLiteral(), QDaemonLog::ErrorEntry);
+        return false;
+    }
+
+    return d->install();
 }
 
 /*!
@@ -97,6 +119,11 @@ bool QDaemonController::install(const QString & path, const QStringList & argume
 bool QDaemonController::uninstall()
 {
     Q_D(QDaemonController);
+    if (!d->state.isLoaded())  {
+        qDaemonLog(QStringLiteral(), QDaemonLog::ErrorEntry);
+        return false;
+    }
+
     return d->uninstall();
 }
 

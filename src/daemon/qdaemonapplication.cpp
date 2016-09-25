@@ -229,7 +229,7 @@ void QDaemonApplication::setApplicationDescription(const QString & description)
 QString QDaemonApplicationPrivate::description;
 
 QDaemonApplicationPrivate::QDaemonApplicationPrivate(QDaemonApplication * q)
-    : q_ptr(q), log(*new QDaemonLogPrivate), autoQuit(true)
+    : q_ptr(q), autoQuit(true)
 {
     std::signal(SIGTERM, QDaemonApplicationPrivate::processSignalHandler);
     std::signal(SIGINT, QDaemonApplicationPrivate::processSignalHandler);
@@ -264,7 +264,7 @@ void QDaemonApplicationPrivate::processSignalHandler(int signalNumber)
 QAbstractDaemonBackend * QDaemonApplicationPrivate::createBackend(bool isDaemon)
 {
     if (isDaemon)  {
-        log.setLogType(QDaemonLog::LogToFile);
+        qDaemonLog().setLogType(QDaemonLog::LogToFile);
         return new DaemonBackend(parser);
     }
     else

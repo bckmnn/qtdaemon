@@ -1,6 +1,7 @@
 #include "qdaemon_p.h"
 #include "qdaemon.h"
 #include "qdaemondbusinterface_p.h"
+#include "qdaemonlog.h"
 
 #include <QCoreApplication>
 
@@ -9,7 +10,7 @@ QT_DAEMON_BEGIN_NAMESPACE
 void QDaemonPrivate::_q_start()
 {
     // Create the DBus service
-    if (!state.load() || !dbus.create(state.service()))
+    if (!state.isLoaded() || !dbus.create(state.service()))
         qApp->quit();
 
     // Just emit the ready signal, nothing more to do here

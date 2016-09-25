@@ -64,7 +64,7 @@ bool QDaemonControllerPrivate::start()
     }
 
     // Repeat the call to make sure the communication is ok
-    dbus.setTimeout(state.dbusTimeout());
+    dbus.setTimeout(state.dbusTimeout() * 1000);
     if (!dbus.open(QDaemonDBusInterface::AutoRetryFlag))  {
         qDaemonLog(QStringLiteral("Connection with the daemon couldn't be established. (%1)").arg(dbus.error()), QDaemonLog::ErrorEntry);
         return false;
@@ -86,13 +86,8 @@ bool QDaemonControllerPrivate::stop()
     return reply.isValid() && reply.value();
 }
 
-bool QDaemonControllerPrivate::install(const QString & executablePath, const QStringList & arguments)
+bool QDaemonControllerPrivate::install()
 {
-    if (!state.initialize(executablePath, arguments))  {
-        qDaemonLog(QStringLiteral(), QDaemonLog::ErrorEntry);
-        return false;
-    }
-
     QString dbusFilePath = state.dbusConfigPath(), initdFilePath = state.initdScriptPath();
     if (dbusFilePath.isEmpty() || initdFilePath.isEmpty())  {
         qDaemonLog(QStringLiteral("The provided D-Bus path and/or init.d is invalid"), QDaemonLog::ErrorEntry);
@@ -184,6 +179,7 @@ bool QDaemonControllerPrivate::uninstall()
         return false;
     }
 
+    state.clear();
     return true;
 }
 
@@ -191,10 +187,10 @@ QtDaemon::DaemonStatus QDaemonControllerPrivate::status()
 {
     QDaemonDBusInterface dbus(state.service());
     if (!dbus.open())
-        return DaemonNotRunning;
+        return RunningStatus;
 
     QDBusReply<bool> reply = dbus.call<bool>(QStringLiteral("isRunning"));
-    return reply.isValid() && reply.value() ? DaemonRunning : DaemonNotRunning;
+    return reply.isValid() && reply.value() ? RunningStatus : NotRunningStatus;
 }
 
 QT_DAEMON_END_NAMESPACE

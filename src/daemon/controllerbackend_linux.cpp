@@ -93,7 +93,7 @@ bool ControllerBackendLinux::uninstall()
 
 DaemonStatus ControllerBackendLinux::status()
 {
-    return DaemonNotRunning;
+    return NotRunningStatus;
 }
 
 QT_DAEMON_END_NAMESPACE

@@ -42,10 +42,12 @@ static const qint32 defaultDBusTimeout = 30;
 QDaemonState::Data::Data(const QString & daemonName)
     : name(daemonName), initdPrefix(defaultInitDPath), dbusPrefix(defaultDBusPath), dbusTimeout(defaultDBusTimeout)
 {
+    qRegisterMetaType<QDaemonFlags>();
+    qRegisterMetaTypeStreamOperators<QDaemonFlags>();
 }
 
 QDaemonState::QDaemonState(const QString & name)
-    : d(name)
+    : loaded(false), d(name)
 {
 }
 
@@ -60,7 +62,19 @@ bool QDaemonState::initialize(const QString & exe, const QStringList & arguments
 
     // Construct the service name
     QByteArray path = d.path.toUtf8();
-    d.service = QStringLiteral("io.qt.QtDaemon.%1-%2").arg(info.fileName()).arg(qChecksum(path.data(), path.size()));
+    quint16 checksum = qChecksum(path.data(), path.size());
+
+    QString serviceBase, organizationDomain = QCoreApplication::organizationDomain();
+    if (!organizationDomain.isEmpty())  {
+        QStringList elements = organizationDomain.split('.');
+        std::reverse(elements.begin(), elements.end());
+
+        serviceBase = elements.join('.');
+    }
+    else
+        serviceBase = QStringLiteral("io.qt.QtDaemon");
+
+    d.service = QStringLiteral("%1.%2-%3").arg(serviceBase).arg(info.fileName()).arg(checksum);
 
     return true;
 }
@@ -94,7 +108,11 @@ QString QDaemonState::initdScriptPath() const
 
 bool QDaemonState::load()
 {
-    QSettings settings(QSettings::SystemScope, d.name, QCoreApplication::organizationName());
+    QString organizationName = QCoreApplication::organizationName();
+    if (organizationName.isEmpty())
+        return false;
+
+    QSettings settings(QSettings::SystemScope, organizationName, d.name);
     if (settings.allKeys().size() <= 0)
         return false;
 
@@ -113,7 +131,8 @@ bool QDaemonState::load()
     d.dbusTimeout = settings.value(QStringLiteral("DBusTimeout")).value<qint32>();
 #endif
 
-    return !d.path.isEmpty() && !d.executable.isEmpty() && !d.directory.isEmpty() && !d.service.isEmpty();
+    loaded = !d.path.isEmpty() && !d.executable.isEmpty() && !d.directory.isEmpty() && !d.service.isEmpty();
+    return loaded;
 }
 
 bool QDaemonState::save() const
@@ -121,7 +140,7 @@ bool QDaemonState::save() const
     if (d.path.isEmpty() || d.executable.isEmpty() || d.directory.isEmpty() || d.service.isEmpty())
         return false;
 
-    QSettings settings(QSettings::SystemScope, d.name, QCoreApplication::organizationName());
+    QSettings settings(QSettings::SystemScope, QCoreApplication::organizationName(), d.name);
 
     // Serialize the settings
     settings.setValue(QStringLiteral("Path"), d.path);
@@ -138,8 +157,32 @@ bool QDaemonState::save() const
     settings.setValue(QStringLiteral("DBusTimeout"), d.dbusTimeout);
 #endif
 
-    settings.sync();    // Save to non-volatile storage immediately
     return true;
+}
+
+void QDaemonState::clear()
+{
+    QString organizationName = QCoreApplication::organizationName();
+    if (organizationName.isEmpty())
+        return;
+
+    QSettings settings(QSettings::SystemScope, organizationName, d.name);
+    settings.clear();
+}
+
+QDataStream & operator << (QDataStream & out, const QDaemonFlags & flags)
+{
+    out << static_cast<QDaemonFlags::Int>(flags);
+    return out;
+}
+
+QDataStream & operator >> (QDataStream & in, QDaemonFlags & flags)
+{
+    QDaemonFlags::Int value;
+    in >> value;
+
+    flags = QDaemonFlags(value);
+    return in;
 }
 
 QT_DAEMON_END_NAMESPACE

@@ -75,7 +75,7 @@ int QAbstractControllerBackend::exec()
     else if (parser.isSet(uninstallOption))
         result = uninstall();
     else if (parser.isSet(statusOption))  {
-        qDaemonLog() << (status() == QtDaemon::DaemonRunning ? QCoreApplication::translate("main", "Daemon is running.") : QCoreApplication::translate("main", "Daemon is not running or it's not responding."));
+        qDaemonLog() << (status() == QtDaemon::RunningStatus ? QCoreApplication::translate("main", "Daemon is running.") : QCoreApplication::translate("main", "Daemon is not running or it's not responding."));
     }
     else if (parser.isSet(fakeOption))  {
         autoQuit = false;	// Enforce not quitting

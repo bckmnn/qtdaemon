@@ -37,6 +37,9 @@ using namespace QtDaemon;
 
 int main(int argc, char ** argv)
 {
+    QCoreApplication::setOrganizationDomain("void.company.domain");
+    QCoreApplication::setOrganizationName("Void Company Name Inc.");
+
     QCoreApplication app(argc, argv);
 
     const QCommandLineOption install(QStringLiteral("install"), QStringLiteral("Installs the daemon"), QStringLiteral("daemon executable"));
@@ -57,6 +60,7 @@ int main(int argc, char ** argv)
     controller.setFlags(QtDaemon::UpdatePathFlag | QtDaemon::AgentFlag | QtDaemon::UserAgentFlag);
     controller.setInitScriptPrefix(QStringLiteral("/home/nye/Temp/daemon/initd"));
     controller.setDBusConfigurationPrefix(QStringLiteral("/home/nye/Temp/daemon/dbus"));
+    controller.setDescription(QStringLiteral("The example demonstrates creating a fully customizable daemon and its corresponding controller application."));
 
     QTextStream out(stdout);
 

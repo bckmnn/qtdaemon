@@ -28,17 +28,24 @@
 
 #include <QCoreApplication>
 #include <QDaemon>
-#include <QDebug>
+#include <QDaemonLog>
+#include <QFile>
+#include <QTextStream>
 
 using namespace QtDaemon;
 
 int main(int argc, char ** argv)
 {
+    QCoreApplication::setOrganizationDomain("void.company.domain");
+    QCoreApplication::setOrganizationName("Void Company Name Inc.");
+
     QCoreApplication app(argc, argv);
 
     QDaemon engine("QtDaemon Custom Control example");
     QObject::connect(&engine, &QDaemon::ready, [] (const QStringList & args) -> void {
-        qDebug() << "Daemon running with: " << args.join(" ");
+        qDaemonLog() << QStringLiteral("The custom daemon is running!");
+        qDaemonLog() << QStringLiteral("Arguments: ");
+        qDaemonLog() << args.join(' ');
     });
 
     return QCoreApplication::exec();

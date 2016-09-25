@@ -10,6 +10,8 @@ QDaemon::QDaemon(const QString & name)
 {
     Q_ASSERT_X(qApp, Q_FUNC_INFO, "You must create the application object first.");
 
+    d_ptr->state.load();
+
     QObject::connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(_q_stop()));
     QMetaObject::invokeMethod(this, "_q_start", Qt::QueuedConnection);     // Queue the daemon start up for when the application is ready
 }
