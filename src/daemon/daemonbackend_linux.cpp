@@ -108,9 +108,9 @@ QString DaemonBackendLinux::serviceName()
     if (domain.isEmpty())
         return QStringLiteral("io.qt.QtDaemon.%1").arg(executable);
 
-    QStringList elements = domain.split('.', QString::SkipEmptyParts);
+    QStringList elements = domain.split(QLatin1Char('.'), QString::SkipEmptyParts);
     std::reverse(elements.begin(), elements.end());
-    return elements.join('.') + QStringLiteral(".") + executable;
+    return elements.join(QLatin1Char('.')) + QStringLiteral(".") + executable;
 }
 
 QT_DAEMON_END_NAMESPACE

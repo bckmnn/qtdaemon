@@ -54,8 +54,8 @@ const QString ControllerBackendLinux::dbusPrefix = QStringLiteral("dbus-prefix")
 
 ControllerBackendLinux::ControllerBackendLinux(QCommandLineParser & parser, bool autoQuit)
     : QAbstractControllerBackend(parser, autoQuit),
-      dbusPrefixOption(dbusPrefix, QCoreApplication::translate("main", "Sets the path for the installed dbus configuration file"), QStringLiteral("path"), "defaultDBusPath"),
-      initdPrefixOption(initdPrefix, QCoreApplication::translate("main", "Sets the path for the installed init.d script"), QStringLiteral("path"), "defaultInitPath")
+      dbusPrefixOption(dbusPrefix, QCoreApplication::translate("main", "Sets the path for the installed dbus configuration file"), QStringLiteral("path"), QStringLiteral("defaultDBusPath")),
+      initdPrefixOption(initdPrefix, QCoreApplication::translate("main", "Sets the path for the installed init.d script"), QStringLiteral("path"), QStringLiteral("defaultInitPath"))
 {
     parser.addOption(dbusPrefixOption);
     parser.addOption(initdPrefixOption);

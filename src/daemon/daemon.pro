@@ -6,11 +6,13 @@ MODULE = daemon
 QT = core
 unix:!macx  {
     QT += dbus
-
-    QMAKE_CXXFLAGS_DEBUG += -std=c++03 -pedantic-errors # Just make sure we're not using *anything* from c++11
 }
 
-DEFINES += QT_NO_FOREACH
+CONFIG(debug, debug|release):*g++ {
+    QMAKE_CXXFLAGS += --pedantic-errors
+}
+
+DEFINES += QT_NO_FOREACH QT_NO_CAST_FROM_ASCII QT_NO_CAST_TO_ASCII
 
 include($$PWD/daemon-lib.pri)
 

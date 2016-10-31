@@ -6,9 +6,9 @@ SOURCES += \
     $$PWD/qdaemoncontroller.cpp \
     $$PWD/qabstractdaemonbackend.cpp \
     $$PWD/qdaemonstate.cpp \
+    $$PWD/qdaemon.cpp \
     $$PWD/qdaemoncontroller_linux.cpp \
     $$PWD/qdaemondbusinterface.cpp \
-    $$PWD/qdaemon.cpp \
     $$PWD/qdaemon_linux.cpp
 
 PUBLIC_HEADERS += \

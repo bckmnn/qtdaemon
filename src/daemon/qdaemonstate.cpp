@@ -66,10 +66,10 @@ bool QDaemonState::initialize(const QString & exe, const QStringList & arguments
 
     QString serviceBase, organizationDomain = QCoreApplication::organizationDomain();
     if (!organizationDomain.isEmpty())  {
-        QStringList elements = organizationDomain.split('.');
+        QStringList elements = organizationDomain.split(QLatin1Char('.'));
         std::reverse(elements.begin(), elements.end());
 
-        serviceBase = elements.join('.');
+        serviceBase = elements.join(QLatin1Char('.'));
     }
     else
         serviceBase = QStringLiteral("io.qt.QtDaemon");
