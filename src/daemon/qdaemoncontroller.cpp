@@ -188,4 +188,13 @@ QString QDaemonController::dbusConfigurationPrefix() const
     return d_func()->state.dbusPrefix();
 }
 
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
+/*!
+*/
+QDaemonControllerPrivate::QDaemonControllerPrivate(const QString & name, QDaemonController * q)
+    : q_ptr(q), state(name)
+{
+}
+
 QT_DAEMON_END_NAMESPACE

@@ -40,7 +40,7 @@
 #ifndef QABSTRACTDAEMONBACKEND_H
 #define QABSTRACTDAEMONBACKEND_H
 
-#include "QtDaemon/qdaemon-global.h"
+#include "QtDaemon/qdaemon_global.h"
 
 #include <QtCore/qstringlist.h>
 #include <QtCore/qcommandlineoption.h>

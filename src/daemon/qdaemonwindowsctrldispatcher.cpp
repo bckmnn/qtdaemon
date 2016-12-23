@@ -26,93 +26,65 @@
 **
 ****************************************************************************/
 
-#include "daemonbackend_win.h"
+#include "qdaemonwindowsctrldispatcher_p.h"
 #include "qdaemonlog.h"
-#include "qdaemonapplication.h"
 
-#include <QtCore/qcommandlineparser.h>
-#include <QtCore/qthread.h>
-#include <QtCore/qsemaphore.h>
-
-#include <Windows.h>
+#include <QtCore/qcoreapplication.h>
 
 QT_DAEMON_BEGIN_NAMESPACE
 
 static const qint32 serviceWaitHint = 1000;			// Just a service control sugar (1 second)
 
-// --------------------------------------------------------------------------------------------------------------------------------------------------- //
-// --- WinAPI control dispatcher wrapper thread ------------------------------------------------------------------------------------------------------ //
-// --------------------------------------------------------------------------------------------------------------------------------------------------- //
-
-VOID WINAPI ServiceMain(DWORD, LPTSTR *);
-DWORD WINAPI ServiceControlHandler(DWORD, DWORD, LPVOID, LPVOID);
-VOID WINAPI ReportServiceStatus(DWORD, DWORD, DWORD);
-
-class Q_DAEMON_LOCAL WindowsCtrlDispatcher : public QThread
+QDaemonWindowsCtrlDispatcher::QDaemonWindowsCtrlDispatcher()
+    : QThread(Q_NULLPTR), serviceStartLock(0), serviceQuitLock(0), serviceStatusHandle(NULL), ok(true)
 {
-    friend VOID WINAPI ServiceMain(DWORD, LPTSTR *);
-    friend DWORD WINAPI ServiceControlHandler(DWORD, DWORD, LPVOID, LPVOID);
-    friend VOID WINAPI ReportServiceStatus(DWORD, DWORD, DWORD);
+    Q_ASSERT(!instance);
+    instance = this;
+    ::memset(dispatchTable, 0, 2 * sizeof(SERVICE_TABLE_ENTRY));
+}
 
-public:
-    WindowsCtrlDispatcher(const QString & service)
-        : QThread(NULL), serviceName(service), serviceStartLock(0), serviceQuitLock(0), serviceStatusHandle(NULL)
-    {
-        Q_ASSERT(!instance);
-        instance = this;
-        ::memset(dispatchTable, 0, 2 * sizeof(SERVICE_TABLE_ENTRY));
+void QDaemonWindowsCtrlDispatcher::run()
+{
+    dispatchTable[0].lpServiceName = reinterpret_cast<LPTSTR>(const_cast<ushort *>(serviceName.utf16()));	// Type safety be damned ...!
+    dispatchTable[0].lpServiceProc = ServiceMain;
+
+    // Just call the control dispatcher and hang
+    if (!StartServiceCtrlDispatcher(dispatchTable))  {
+        ok = false;
+
+        qDaemonLog(QStringLiteral("Couldn't run the service control dispatcher (Error code %1).").arg(GetLastError()), QDaemonLog::ErrorEntry);
+        serviceStartLock.release();		// Free the main thread
     }
+}
 
-    void run() Q_DECL_OVERRIDE
-    {
-        dispatchTable[0].lpServiceName = reinterpret_cast<LPTSTR>(const_cast<ushort *>(serviceName.utf16()));	// Type safety be damned ...!
-        dispatchTable[0].lpServiceProc = ServiceMain;
+bool QDaemonWindowsCtrlDispatcher::startService(const QString & service)
+{
+    serviceName = service;
 
-        // Just call the control dispatcher and hang
-        if (!StartServiceCtrlDispatcher(dispatchTable))  {
-            qDaemonLog(QStringLiteral("Couldn't run the service control dispatcher (Error code %1).").arg(GetLastError()), QDaemonLog::ErrorEntry);
-            serviceStartLock.release();		// Free the main thread
-        }
+    start();						// Start the control thread
+    serviceStartLock.acquire();		// Wait until the service has started
 
-        QMetaObject::invokeMethod(qApp, "quit", Qt::QueuedConnection);	// We want to quit (if we are not already quitting)
-    }
+    return ok;
+}
 
-    void startService()
-    {
-        start();						// Start the control thread
-        serviceStartLock.acquire();		// Wait until the service has started
-    }
+void QDaemonWindowsCtrlDispatcher::stopService()
+{
+    if (serviceQuitLock.available() > 0)
+        return;		// Already requested a stop
 
-    void stopService()
-    {
-        if (serviceQuitLock.available() > 0)
-            return;		// Already requested a stop
+    serviceQuitLock.release();
+    wait();
+}
 
-        serviceQuitLock.release();
-        wait();
-    }
+QDaemonWindowsCtrlDispatcher * QDaemonWindowsCtrlDispatcher::instance = Q_NULLPTR;
 
-private:
-    QString serviceName;
-    QSemaphore serviceStartLock;
-    QSemaphore serviceQuitLock;
-    SERVICE_TABLE_ENTRY dispatchTable[2];
-    SERVICE_STATUS_HANDLE serviceStatusHandle;
-    SERVICE_STATUS serviceStatus;
-
-private:
-    static WindowsCtrlDispatcher * instance;
-};
-
-WindowsCtrlDispatcher * WindowsCtrlDispatcher::instance = NULL;
-/*
 // --------------------------------------------------------------------------------------------------------------------------------------------------- //
 // --- WinAPI callbacks ------------------------------------------------------------------------------------------------------------------------------ //
 // --------------------------------------------------------------------------------------------------------------------------------------------------- //
 
 VOID WINAPI ServiceMain(DWORD, LPTSTR *)
 {
-    WindowsCtrlDispatcher * const ctrl = WindowsCtrlDispatcher::instance;
+    QDaemonWindowsCtrlDispatcher * const ctrl = QDaemonWindowsCtrlDispatcher::instance;
 
     // Just register the handler and that's all
     ctrl->serviceStatusHandle = RegisterServiceCtrlHandlerEx(ctrl->dispatchTable[0].lpServiceName, ServiceControlHandler, ctrl);
@@ -150,7 +122,7 @@ DWORD WINAPI ServiceControlHandler(DWORD control, DWORD, LPVOID, LPVOID context)
         return NO_ERROR;
     case SERVICE_CONTROL_INTERROGATE:
         {
-            WindowsCtrlDispatcher * const ctrl = reinterpret_cast<WindowsCtrlDispatcher *>(context);
+            QDaemonWindowsCtrlDispatcher * const ctrl = reinterpret_cast<QDaemonWindowsCtrlDispatcher *>(context);
             ReportServiceStatus(ctrl->serviceStatus.dwCurrentState, ctrl->serviceStatus.dwWin32ExitCode, ctrl->serviceStatus.dwWaitHint);
         }
         return NO_ERROR;
@@ -163,7 +135,7 @@ DWORD WINAPI ServiceControlHandler(DWORD control, DWORD, LPVOID, LPVOID context)
 
 VOID WINAPI ReportServiceStatus(DWORD dwCurrentState, DWORD dwWin32ExitCode, DWORD dwWaitHint)
 {
-    WindowsCtrlDispatcher * const ctrl = WindowsCtrlDispatcher::instance;
+    QDaemonWindowsCtrlDispatcher * const ctrl = QDaemonWindowsCtrlDispatcher::instance;
 
     static DWORD dwCheckPoint = 1;
 
@@ -176,35 +148,6 @@ VOID WINAPI ReportServiceStatus(DWORD dwCurrentState, DWORD dwWin32ExitCode, DWO
 
     // Report the status of the service to the SCM.
     SetServiceStatus(ctrl->serviceStatusHandle, &ctrl->serviceStatus);
-}*/
-
-// --------------------------------------------------------------------------------------------------------------------------------------------------- //
-// --- DaemonBackendWindows -------------------------------------------------------------------------------------------------------------------------- //
-// --------------------------------------------------------------------------------------------------------------------------------------------------- //
-
-DaemonBackendWindows::DaemonBackendWindows(QCommandLineParser & parser)
-    : QAbstractDaemonBackend(parser)
-{
-}
-
-DaemonBackendWindows::~DaemonBackendWindows()
-{
-}
-
-int DaemonBackendWindows::exec()
-{
-    QStringList arguments = parser.positionalArguments();
-    arguments.prepend(QDaemonApplication::applicationFilePath());
-
-    WindowsCtrlDispatcher dispatcher(QDaemonApplication::applicationName());
-    dispatcher.startService();
-
-    QMetaObject::invokeMethod(qApp, "daemonized", Qt::QueuedConnection, Q_ARG(QStringList, arguments));
-    int status = QCoreApplication::exec();
-
-    dispatcher.stopService();
-
-    return status;
 }
 
 QT_DAEMON_END_NAMESPACE

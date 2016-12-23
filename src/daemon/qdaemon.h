@@ -1,7 +1,7 @@
 #ifndef QDAEMON_H
 #define QDAEMON_H
 
-#include "QtDaemon/qdaemon-global.h"
+#include "QtDaemon/qdaemon_global.h"
 
 #include <QObject>
 

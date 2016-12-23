@@ -40,7 +40,7 @@
 #ifndef QDAEMONDBUSINTERFACE_P_H
 #define QDAEMONDBUSINTERFACE_P_H
 
-#include "QtDaemon/qdaemon-global.h"
+#include "QtDaemon/qdaemon_global.h"
 
 #include <QObject>
 

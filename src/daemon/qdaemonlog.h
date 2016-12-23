@@ -29,7 +29,7 @@
 #ifndef QDAEMONLOG_H
 #define QDAEMONLOG_H
 
-#include "QtDaemon/qdaemon-global.h"
+#include "QtDaemon/qdaemon_global.h"
 
 QT_DAEMON_BEGIN_NAMESPACE
 

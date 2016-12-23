@@ -430,7 +430,7 @@ private:
         QString path(reinterpret_cast<const QChar * const>(buffer), (bufferSize - 1) / sizeof(TCHAR) );
 
         // Normalize the paths
-        entries = path.split(';', QString::SkipEmptyParts);
+        entries = path.split(QLatin1Char(';'), QString::SkipEmptyParts);
         for (QStringList::Iterator i = entries.begin(), end = entries.end(); i != end; i++)
             *i = QDir::cleanPath(*i);
 
@@ -448,7 +448,7 @@ private:
             *i = QDir::toNativeSeparators(*i);
 
         // Convert back to a big fat string
-        QString path = entries.join(';');
+        QString path = entries.join(QLatin1Char(';'));
 
         // And again, try to forget there's such thing as type safety
         if (RegSetValueEx(registryKey, TEXT("Path"), 0, REG_SZ, reinterpret_cast<LPCBYTE>(path.utf16()), path.size() * sizeof(TCHAR) + 1) != ERROR_SUCCESS)  {
@@ -525,7 +525,7 @@ bool ControllerBackendWindows::install()
 
     WindowsService service(QDaemonApplication::applicationName(), manager);
     service.setDescription(QDaemonApplication::applicationDescription());
-    service.setExecutable(executable.join(' '));
+    service.setExecutable(executable.join(QLatin1Char(' ')));
 
     if (!service.create())
         return false;
@@ -560,7 +560,7 @@ bool ControllerBackendWindows::uninstall()
     return true;
 }
 
-QAbstractControllerBackend::DaemonStatus ControllerBackendWindows::status()
+DaemonStatus ControllerBackendWindows::status()
 {
     WindowsServiceManager manager = WindowsServiceManager::open();
     if (!manager.isValid())

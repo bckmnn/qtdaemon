@@ -40,7 +40,7 @@
 #ifndef QDAEMONSTATE_P_H
 #define QDAEMONSTATE_P_H
 
-#include "qdaemon-global.h"
+#include "qdaemon_global.h"
 
 #include <QHash>
 #include <QVariant>

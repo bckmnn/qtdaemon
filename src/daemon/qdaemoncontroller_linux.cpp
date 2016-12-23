@@ -39,11 +39,6 @@
 
 QT_DAEMON_BEGIN_NAMESPACE
 
-QDaemonControllerPrivate::QDaemonControllerPrivate(const QString & name, QDaemonController * q)
-    : q_ptr(q), state(name)
-{
-}
-
 bool QDaemonControllerPrivate::start()
 {
     QDaemonDBusInterface dbus(state.service());

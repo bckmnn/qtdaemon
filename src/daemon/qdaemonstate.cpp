@@ -32,6 +32,7 @@
 #include <QSettings>
 #include <QFileInfo>
 #include <QDir>
+#include <QDataStream>
 
 QT_DAEMON_BEGIN_NAMESPACE
 

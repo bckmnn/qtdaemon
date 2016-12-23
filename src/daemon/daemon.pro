@@ -8,9 +8,9 @@ unix:!macx  {
     QT += dbus
 }
 
-CONFIG(debug, debug|release):*g++ {
-    QMAKE_CXXFLAGS += --pedantic-errors
-}
+#CONFIG(debug, debug|release):*g++ {
+#    QMAKE_CXXFLAGS += --pedantic-errors
+#}
 
 DEFINES += QT_NO_FOREACH QT_NO_CAST_FROM_ASCII QT_NO_CAST_TO_ASCII
 

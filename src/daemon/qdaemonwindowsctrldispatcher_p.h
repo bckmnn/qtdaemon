@@ -26,50 +26,60 @@
 **
 ****************************************************************************/
 
-#ifndef QDAEMONAPPLICATION_H
-#define QDAEMONAPPLICATION_H
+//
+//  W A R N I N G
+//  -------------
+//
+// This file is not part of the QtDaemon API. It exists only
+// as an implementation detail. This header file may change from
+// version to version without notice, or even be removed.
+//
+// We mean it.
+//
 
-#include "QtDaemon/qdaemon_global.h"
+#ifndef QDAEMONWINDOWSCTRLDISPATCHER_P_H
+#define QDAEMONWINDOWSCTRLDISPATCHER_P_H
 
-#include <QtCore/qcoreapplication.h>
+#include "qdaemon_global.h"
+
+#include <QtCore/qthread.h>
+#include <QtCore/qsemaphore.h>
+
+#include <Windows.h>
 
 QT_DAEMON_BEGIN_NAMESPACE
 
-class QDaemonApplicationPrivate;
-class Q_DAEMON_EXPORT QDaemonApplication : public QCoreApplication
-{
-    Q_OBJECT
-    Q_DECLARE_PRIVATE(QDaemonApplication)
-    Q_DISABLE_COPY(QDaemonApplication)
+VOID WINAPI ServiceMain(DWORD, LPTSTR *);
+DWORD WINAPI ServiceControlHandler(DWORD, DWORD, LPVOID, LPVOID);
+VOID WINAPI ReportServiceStatus(DWORD, DWORD, DWORD);
 
-    Q_PROPERTY(bool autoQuit READ autoQuit WRITE setAutoQuit)
-    Q_PROPERTY(QString applicationDescription READ applicationDescription WRITE setApplicationDescription)
+class Q_DAEMON_LOCAL QDaemonWindowsCtrlDispatcher : public QThread
+{
+    friend VOID WINAPI ServiceMain(DWORD, LPTSTR *);
+    friend DWORD WINAPI ServiceControlHandler(DWORD, DWORD, LPVOID, LPVOID);
+    friend VOID WINAPI ReportServiceStatus(DWORD, DWORD, DWORD);
 
 public:
-    QDaemonApplication(int & argc, char ** argv);
-    ~QDaemonApplication() Q_DECL_OVERRIDE;
+    QDaemonWindowsCtrlDispatcher();
 
-    static int exec();
-    static QDaemonApplication * instance();
+    void run() Q_DECL_OVERRIDE;
 
-    bool autoQuit() const;
-    void setAutoQuit(bool);
-
-    static QString applicationDescription();
-    static void setApplicationDescription(const QString &);
-
-Q_SIGNALS:
-    void daemonized(const QStringList &);
-
-    void started();
-    void stopped();
-    void installed();
-    void uninstalled();
+    bool startService(const QString &);
+    void stopService();
 
 private:
-    QDaemonApplicationPrivate * d_ptr;
+    QString serviceName;
+    QSemaphore serviceStartLock;
+    QSemaphore serviceQuitLock;
+    SERVICE_TABLE_ENTRY dispatchTable[2];
+    SERVICE_STATUS_HANDLE serviceStatusHandle;
+    SERVICE_STATUS serviceStatus;
+    bool ok;
+
+private:
+    static QDaemonWindowsCtrlDispatcher * instance;
 };
 
 QT_DAEMON_END_NAMESPACE
 
-#endif // QDAEMONAPPLICATION_H
+#endif // QDAEMONWINDOWSCTRLDISPATCHER_P_H
