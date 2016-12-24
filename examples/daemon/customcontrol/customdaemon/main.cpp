@@ -27,10 +27,11 @@
 ****************************************************************************/
 
 #include <QCoreApplication>
-#include <QDaemon>
-#include <QDaemonLog>
+#include <QDateTime>
 #include <QFile>
 #include <QTextStream>
+
+#include <QDaemon>
 
 using namespace QtDaemon;
 
@@ -41,11 +42,15 @@ int main(int argc, char ** argv)
 
     QCoreApplication app(argc, argv);
 
-    QDaemon engine("QtDaemon Custom Control example");
-    QObject::connect(&engine, &QDaemon::ready, [] (const QStringList & args) -> void {
-        qDaemonLog() << QStringLiteral("The custom daemon is running!");
-        qDaemonLog() << QStringLiteral("Arguments: ");
-        qDaemonLog() << args.join(' ');
+    QDaemon daemon("QtDaemon Custom Control example");
+    QObject::connect(&daemon, &QDaemon::ready, [&daemon] (const QStringList & arguments) -> void {
+        QFile outFile(QStringLiteral("%1.log").arg(daemon.filePath()));
+        if (!outFile.open(QFile::WriteOnly | QFile::Append | QFile::Text))
+            return;
+
+        QTextStream out(&outFile);
+
+        out << QStringLiteral("[%1] The custom daemon is running! Arguments: %2").arg(QDateTime::currentDateTime().toString(Qt::ISODate)).arg(arguments.join(' ')) << endl;
     });
 
     return QCoreApplication::exec();

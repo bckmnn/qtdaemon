@@ -46,12 +46,14 @@ int main(int argc, char ** argv)
     const QCommandLineOption uninstall(QStringLiteral("uninstall"), QStringLiteral("Uninstalls the daemon"));
     const QCommandLineOption start(QStringLiteral("start"), QStringLiteral("Starts the daemon"));
     const QCommandLineOption stop(QStringLiteral("stop"), QStringLiteral("Stops the daemon"));
+    const QCommandLineOption status(QStringLiteral("status"), QStringLiteral("Retrieves the status of the daemon"));
 
     QCommandLineParser parser;
     parser.addOption(install);
     parser.addOption(uninstall);
     parser.addOption(start);
     parser.addOption(stop);
+    parser.addOption(status);
     parser.addHelpOption();
 
     parser.parse(QCoreApplication::arguments());
@@ -64,29 +66,40 @@ int main(int argc, char ** argv)
 
     QTextStream out(stdout);
 
-    bool status = false;
+    bool ok = false;
     if (parser.isSet(install))  {
-        QString executablePath = parser.value(install);     // Run with --install=../customdaemon/customdaemon
+        QString executablePath = parser.value(install);     // Run with --install=../customdaemon/(debug/)customdaemon(.exe)
         QFileInfo executableInfo(executablePath);
-        if (!executablePath.isEmpty() && executableInfo.isExecutable())  {
-            QStringList arguments;
-            arguments << QStringLiteral("--test-daemon") << QStringLiteral("--controller-path=\"%1\"").arg(QCoreApplication::applicationFilePath());
-
-            status = controller.install(executableInfo.absoluteFilePath(), arguments);
-        }
+        if (!executablePath.isEmpty() && executableInfo.isExecutable())
+            ok = controller.install(executableInfo.absoluteFilePath(), parser.positionalArguments());
         else
-            out << QStringLiteral("File %1 isn't a valid executable").arg(executablePath);
+            out << QStringLiteral("File %1 isn't a valid executable").arg(executablePath) << endl;
     }
     else if (parser.isSet(uninstall))
-        status = controller.uninstall();
-    else if (parser.isSet(start))
-        status = controller.start(parser.positionalArguments());
+        ok = controller.uninstall();
+    else if (parser.isSet(start))  {
+        QStringList arguments = parser.positionalArguments();
+        if (arguments.isEmpty())
+            ok = controller.start();
+        else
+            ok = controller.start(arguments);
+    }
     else if (parser.isSet(stop))
-        status = controller.stop();
+        ok = controller.stop();
+    else if (parser.isSet(status))  {
+        out << (controller.status() == QtDaemon::RunningStatus ? "Running" : "Not running") << endl;
+        ok = true;
+    }
     else  {
         out << parser.helpText();
-        status = true;
+        ok = true;
     }
 
-    return status ? 0 : 1;
+    if (!ok)  {
+        out << QStringLiteral("Operation failed!");
+        return 1;
+    }
+
+    out << QStringLiteral("Operation succeeded!");
+    return 0;
 }

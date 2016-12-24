@@ -20,6 +20,9 @@ class Q_DAEMON_EXPORT QDaemon : public QObject
 public:
     explicit QDaemon(const QString &);
 
+    QString directoryPath() const;
+    QString filePath() const;
+
 signals:
     void ready(const QStringList &);
 

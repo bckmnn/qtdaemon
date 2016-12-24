@@ -66,16 +66,14 @@ bool QDaemonControllerPrivate::install()
 
     QWindowsService service(state.name(), manager);
     service.setDescription(state.description());
-
-    QStringList executable = QStringList() << state.path() << state.arguments();
-    service.setExecutable(executable.join(QLatin1Char(' ')));
+    service.setExecutable(state.path());
 
     if (!service.create())
         return false;
 
     if (state.flags().testFlag(UpdatePathFlag))  {
         QWindowsSystemPath path;
-        if (!path.addEntry(state.path()))
+        if (!path.addEntry(state.directory()))
             return false;
     }
 
@@ -94,7 +92,7 @@ bool QDaemonControllerPrivate::uninstall()
 
     if (state.flags().testFlag(UpdatePathFlag))  {
         QWindowsSystemPath path;
-        if (!path.removeEntry(state.path()))
+        if (!path.removeEntry(state.directory()))
             return false;
     }
 

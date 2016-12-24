@@ -63,20 +63,22 @@ bool QDaemonController::start()
 bool QDaemonController::start(const QStringList & arguments)
 {
     Q_D(QDaemonController);
-    if (arguments.isEmpty())
-        return d->start();
-
-    QDaemonState & state = d->state;
-    if (!state.isLoaded())
+    if (!d->state.isLoaded())
         return false;
 
-    QStringList oldArguments = state.arguments();
-    state.setArguments(arguments);
+    QStringList oldArguments = d->state.arguments();
 
-    bool status = d->start();
+    d->state.setArguments(arguments);
+    if (!d->state.save())
+        return false;
 
-    state.setArguments(oldArguments);
-    return status;
+    bool ok = d->start();
+
+    d->state.setArguments(oldArguments);
+    if (!d->state.save())
+        return false;
+
+    return ok;
 }
 
 /*!
@@ -110,7 +112,7 @@ bool QDaemonController::install(const QString & path, const QStringList & argume
         return false;
     }
 
-    return d->install();
+    return d->state.save() && d->install();
 }
 
 /*!
@@ -124,7 +126,12 @@ bool QDaemonController::uninstall()
         return false;
     }
 
-    return d->uninstall();
+    if (d->uninstall())  {
+        d->state.clear();
+        return true;
+    }
+
+    return false;
 }
 
 /*!
@@ -141,12 +148,14 @@ QtDaemon::DaemonStatus QDaemonController::status()
 */
 void QDaemonController::setDescription(const QString & description)
 {
-    d_func()->state.setDescription(description);
+    Q_D(QDaemonController);
+    d->state.setDescription(description);
 }
 
 QString QDaemonController::description() const
 {
-    return d_func()->state.description();
+    Q_D(const QDaemonController);
+    return d->state.description();
 }
 
 /*!
@@ -154,12 +163,14 @@ QString QDaemonController::description() const
 */
 void QDaemonController::setFlags(const QDaemonFlags & flags)
 {
-    d_func()->state.setFlags(flags);
+    Q_D(QDaemonController);
+    d->state.setFlags(flags);
 }
 
 QDaemonFlags QDaemonController::flags() const
 {
-    return d_func()->state.flags();
+    Q_D(const QDaemonController);
+    return d->state.flags();
 }
 
 /*!
@@ -167,12 +178,14 @@ QDaemonFlags QDaemonController::flags() const
 */
 void QDaemonController::setInitScriptPrefix(const QString & prefix)
 {
-    d_func()->state.setInitDPrefix(prefix);
+    Q_D(QDaemonController);
+    d->state.setInitDPrefix(prefix);
 }
 
 QString QDaemonController::initScriptPrefix() const
 {
-    return d_func()->state.initdPrefix();
+    Q_D(const QDaemonController);
+    return d->state.initdPrefix();
 }
 
 /*!
@@ -180,12 +193,14 @@ QString QDaemonController::initScriptPrefix() const
 */
 void QDaemonController::setDBusConfigurationPrefix(const QString & prefix)
 {
-    d_func()->state.setDBusPrefix(prefix);
+    Q_D(QDaemonController);
+    d->state.setDBusPrefix(prefix);
 }
 
 QString QDaemonController::dbusConfigurationPrefix() const
 {
-    return d_func()->state.dbusPrefix();
+    Q_D(const QDaemonController);
+    return d->state.dbusPrefix();
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------- //

@@ -44,6 +44,18 @@ QDaemon::QDaemon(const QString & name)
     QMetaObject::invokeMethod(this, "_q_start", Qt::QueuedConnection);     // Queue the daemon start up for when the application is ready
 }
 
+QString QDaemon::directoryPath() const
+{
+    Q_D(const QDaemon);
+    return d->state.directory();
+}
+
+QString QDaemon::filePath() const
+{
+    Q_D(const QDaemon);
+    return d->state.path();
+}
+
 QT_DAEMON_END_NAMESPACE
 
 #include "moc_qdaemon.cpp"
