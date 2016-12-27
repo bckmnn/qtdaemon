@@ -1,5 +1,4 @@
-#include "qwindowsservicemanager_p.h"
-#include "qdaemonlog.h"
+#include "QtDaemon/private/qwindowsservicemanager_p.h"
 
 #include <QtCore/qelapsedtimer.h>
 #include <QtCore/qdir.h>

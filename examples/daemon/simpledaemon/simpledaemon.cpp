@@ -28,37 +28,41 @@
 
 #include "simpledaemon.h"
 
-#include <QDaemonLog>
 #include <QStringList>
 
-using namespace QtDaemon;
-
 SimpleDaemon::SimpleDaemon(QObject * parent)
-    : QObject(parent)
+    : QObject(parent), logFile("simpledaemon.log"), out(stdout)
 {
+    if (logFile.open(QFile::WriteOnly | QFile::Append | QFile::Text))
+        out.setDevice(&logFile);
 }
 
 void SimpleDaemon::onDaemonReady(const QStringList & arguments)
 {
-    qDaemonLog() << QStringLiteral("The daemon has been started with arguments: %1").arg(arguments.join(' '));
+    out << QStringLiteral("The daemon is ready. Arguments: %1").arg(arguments.join(' ')) << endl;
 }
 
 void SimpleDaemon::onStarted()
 {
-    qDaemonLog() << QStringLiteral("The daemon was started.");
+    out << QStringLiteral("The daemon was started.") << endl;
 }
 
 void SimpleDaemon::onStopped()
 {
-    qDaemonLog() << QStringLiteral("The daemon was stopped.");
+    out << QStringLiteral("The daemon was stopped.") << endl;
 }
 
 void SimpleDaemon::onInstalled()
 {
-    qDaemonLog() << QStringLiteral("The daemon was installed.");
+    out << QStringLiteral("The daemon was installed.") << endl;
 }
 
 void SimpleDaemon::onUninstalled()
 {
-    qDaemonLog() << QStringLiteral("The daemon was uninstalled.");
+    out << QStringLiteral("The daemon was uninstalled.") << endl;
+}
+
+void SimpleDaemon::onError(const QString & error)
+{
+    out << QStringLiteral("An error occured: %1").arg(error) << endl;
 }

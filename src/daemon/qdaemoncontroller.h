@@ -31,7 +31,7 @@
 
 #include "QtDaemon/qdaemon_global.h"
 
-#include <QObject>
+#include <QtCore/qobject.h>
 
 QT_DAEMON_BEGIN_NAMESPACE
 
@@ -46,8 +46,10 @@ public:
     // TODO: Finish up the properties
     Q_PROPERTY(QString description READ description WRITE setDescription)
     Q_PROPERTY(QDaemonFlags flags READ flags WRITE setFlags)
+    Q_PROPERTY(QString initScriptPrefix READ initScriptPrefix WRITE setInitScriptPrefix)
+    Q_PROPERTY(QString dbusConfigurationPrefix READ dbusConfigurationPrefix WRITE setDBusConfigurationPrefix)
 
-    explicit QDaemonController(const QString &);
+    explicit QDaemonController(const QString &, QObject * = Q_NULLPTR);
 
     bool start();
     bool start(const QStringList &);
@@ -56,6 +58,8 @@ public:
     bool uninstall();
 
     QtDaemon::DaemonStatus status();
+
+    QString lastError() const;
 
     void setDescription(const QString &);
     QString description() const;

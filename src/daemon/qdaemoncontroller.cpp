@@ -26,21 +26,23 @@
 **
 ****************************************************************************/
 
-#include "qdaemoncontroller.h"
-#include "qdaemoncontroller_p.h"
-#include "qdaemonlog_p.h"
+#include "QtDaemon/qdaemoncontroller.h"
+#include "QtDaemon/private/qdaemoncontroller_p.h"
 
-#include <QCoreApplication>
+#include <QtCore/qcoreapplication.h>
 
 QT_DAEMON_BEGIN_NAMESPACE
 
 /*!
     Starts the daemon
 */
-QDaemonController::QDaemonController(const QString & name)
-    : QObject(qApp), d_ptr(new QDaemonControllerPrivate(name, this))
+QDaemonController::QDaemonController(const QString & name, QObject * parent)
+    : QObject(parent), d_ptr(new QDaemonControllerPrivate(name, this))
 {
-    d_ptr->state.load();
+    Q_ASSERT_X(qApp, Q_FUNC_INFO, "You must create the application object first.");
+
+    if (!d_ptr->state.load())
+        d_ptr->lastError = QT_DAEMON_TRANSLATE("Couldn't load the daemon configuration.");
 }
 
 /*!
@@ -49,10 +51,8 @@ QDaemonController::QDaemonController(const QString & name)
 bool QDaemonController::start()
 {
     Q_D(QDaemonController);
-    if (!d->state.isLoaded())  {
-        qDaemonLog(QStringLiteral(), QDaemonLog::ErrorEntry);
+    if (!d->state.isLoaded())
         return false;
-    }
 
     return d->start();
 }
@@ -69,14 +69,18 @@ bool QDaemonController::start(const QStringList & arguments)
     QStringList oldArguments = d->state.arguments();
 
     d->state.setArguments(arguments);
-    if (!d->state.save())
+    if (!d->state.save())  {
+        d->lastError = QT_DAEMON_TRANSLATE("Couldn't save the daemon configuration.");
         return false;
+    }
 
     bool ok = d->start();
 
     d->state.setArguments(oldArguments);
-    if (!d->state.save())
+    if (!d->state.save())  {
+        d->lastError = QT_DAEMON_TRANSLATE("Couldn't save the daemon configuration.");
         return false;
+    }
 
     return ok;
 }
@@ -87,10 +91,8 @@ bool QDaemonController::start(const QStringList & arguments)
 bool QDaemonController::stop()
 {
     Q_D(QDaemonController);
-    if (!d->state.isLoaded())  {
-        qDaemonLog(QStringLiteral(), QDaemonLog::ErrorEntry);
+    if (!d->state.isLoaded())
         return false;
-    }
 
     return d->stop();
 }
@@ -103,16 +105,21 @@ bool QDaemonController::install(const QString & path, const QStringList & argume
 {
     Q_D(QDaemonController);
     if (d->state.isLoaded())  {
-        qDaemonLog(QStringLiteral(), QDaemonLog::ErrorEntry);
+        d->lastError = QT_DAEMON_TRANSLATE("The daemon is already installed.");
         return false;
     }
 
     if (!d->state.initialize(path, arguments))  {
-        qDaemonLog(QStringLiteral(), QDaemonLog::ErrorEntry);
+        d->lastError = QT_DAEMON_TRANSLATE("Couldn't initialize the daemon configuration.");
         return false;
     }
 
-    return d->state.save() && d->install();
+    if (!d->state.save())  {
+        d->lastError = QT_DAEMON_TRANSLATE("Couldn't save the daemon configuration.");
+        return false;
+    }
+
+    return d->install();
 }
 
 /*!
@@ -121,17 +128,11 @@ bool QDaemonController::install(const QString & path, const QStringList & argume
 bool QDaemonController::uninstall()
 {
     Q_D(QDaemonController);
-    if (!d->state.isLoaded())  {
-        qDaemonLog(QStringLiteral(), QDaemonLog::ErrorEntry);
+    if (!d->state.isLoaded() || !d->uninstall())
         return false;
-    }
 
-    if (d->uninstall())  {
-        d->state.clear();
-        return true;
-    }
-
-    return false;
+    d->state.clear();
+    return true;
 }
 
 /*!
@@ -141,6 +142,12 @@ QtDaemon::DaemonStatus QDaemonController::status()
 {
     Q_D(QDaemonController);
     return d->status();
+}
+
+QString QDaemonController::lastError() const
+{
+    Q_D(const QDaemonController);
+    return d->lastError;
 }
 
 /*!

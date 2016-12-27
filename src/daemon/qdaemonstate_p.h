@@ -40,10 +40,10 @@
 #ifndef QDAEMONSTATE_P_H
 #define QDAEMONSTATE_P_H
 
-#include "qdaemon_global.h"
+#include "QtDaemon/qdaemon_global.h"
 
-#include <QHash>
-#include <QVariant>
+#include <QtCore/qhash.h>
+#include <QtCore/qvariant.h>
 
 QT_DAEMON_BEGIN_NAMESPACE
 
@@ -68,6 +68,8 @@ public:
     void setInitDPrefix(const QString &);
     void setDBusPrefix(const QString &);
     void setDBusTimeout(qint32);
+    // macOS
+    void generatePListPath();
 
     // Common
     QString name() const;
@@ -84,6 +86,8 @@ public:
     QString initdScriptPath() const;
     QString dbusConfigPath() const;
     qint32 dbusTimeout() const;
+    // macOS
+    QString plistPath() const;
 
 private:
     bool loaded;
@@ -91,7 +95,7 @@ private:
     {
         Data(const QString &);
 
-        QString name, path, executable, directory, description, service, initdPrefix, dbusPrefix;
+        QString name, path, executable, directory, description, service, initdPrefix, dbusPrefix, plistPath;
         QStringList arguments;
         qint32 dbusTimeout;
         QDaemonFlags flags;
@@ -188,6 +192,11 @@ inline QString QDaemonState::dbusPrefix() const
 inline qint32 QDaemonState::dbusTimeout() const
 {
     return d.dbusTimeout;
+}
+
+inline QString QDaemonState::plistPath() const
+{
+    return d.plistPath;
 }
 
 QT_DAEMON_END_NAMESPACE

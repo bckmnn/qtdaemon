@@ -30,13 +30,15 @@
 #define SIMPLEDAEMON_H
 
 #include <QObject>
+#include <QFile>
+#include <QTextStream>
 
 class SimpleDaemon : public QObject
 {
     Q_OBJECT
 
 public:
-    SimpleDaemon(QObject * parent);
+    SimpleDaemon(QObject * = Q_NULLPTR);
 
 public slots:
     void onDaemonReady(const QStringList &);
@@ -45,6 +47,11 @@ public slots:
     void onStopped();
     void onInstalled();
     void onUninstalled();
+    void onError(const QString &);
+
+private:
+    QFile logFile;
+    QTextStream out;
 };
 
 #endif // SIMPLEDAEMON_H

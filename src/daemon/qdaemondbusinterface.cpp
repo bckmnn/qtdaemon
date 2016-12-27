@@ -27,13 +27,12 @@
 ****************************************************************************/
 
 #include "QtDaemon/private/qdaemondbusinterface_p.h"
-#include "QtDaemon/qdaemonlog.h"
 
-#include <QString>
-#include <QThread>
-#include <QElapsedTimer>
+#include <QtCore/qstring.h>
+#include <QtCore/qthread.h>
+#include <QtCore/qelapsedtimer.h>
 
-#include <QDBusError>
+#include <QtDBus/qdbuserror.h>
 
 QT_DAEMON_BEGIN_NAMESPACE
 
@@ -41,7 +40,7 @@ QDaemonDBusInterfaceProvider::QDaemonDBusInterfaceProvider(QObject * parent)
     : QObject(parent), dbus(QDBusConnection::systemBus())
 {
     if (!dbus.isConnected())
-        qDaemonLog(QStringLiteral("Can't connect to the D-Bus system bus: %1").arg(dbus.lastError().message()), QDaemonLog::ErrorEntry);
+        lastError = QT_DAEMON_TRANSLATE("Can't connect to the D-Bus system bus. D-Bus error: %1").arg(dbus.lastError().message());
 }
 
 QDaemonDBusInterfaceProvider::~QDaemonDBusInterfaceProvider()
@@ -56,13 +55,13 @@ bool QDaemonDBusInterfaceProvider::create(const QString & serviceName)
 
     // Register the service
     if (!dbus.registerService(serviceName))  {
-        qDaemonLog(QStringLiteral("Couldn't register a service with the D-Bus system bus: %1").arg(dbus.lastError().message()), QDaemonLog::ErrorEntry);
+        lastError = QT_DAEMON_TRANSLATE("Couldn't register a service with the D-Bus system bus. D-Bus error: %1").arg(dbus.lastError().message());
         return false;
     }
 
     // Register the object
     if (!dbus.registerObject(QStringLiteral("/"), this, QDBusConnection::ExportAllInvokables))  {
-        qDaemonLog(QStringLiteral("Couldn't register an object with the D-Bus system bus. (%1)").arg(dbus.lastError().message()), QDaemonLog::ErrorEntry);
+        lastError = QT_DAEMON_TRANSLATE("Couldn't register an object with the D-Bus system bus. D-Bus error: %1").arg(dbus.lastError().message());
         return false;
     }
 
@@ -73,7 +72,7 @@ bool QDaemonDBusInterfaceProvider::create(const QString & serviceName)
 
 void QDaemonDBusInterfaceProvider::destroy()
 {
-    if (service.isEmpty())
+    if (!dbus.isConnected() || service.isEmpty())
         return;
 
     // Unregister the object
@@ -81,7 +80,7 @@ void QDaemonDBusInterfaceProvider::destroy()
 
     // Unregister the service
     if (!dbus.unregisterService(service))
-        qDaemonLog(QStringLiteral("Can't unregister service from D-bus. (%1)").arg(dbus.lastError().message()), QDaemonLog::WarningEntry);
+        qWarning("Can't unregister the service from D-Bus.");
 }
 
 bool QDaemonDBusInterfaceProvider::isRunning() const
@@ -105,7 +104,7 @@ QDaemonDBusInterface::QDaemonDBusInterface(const QString & serviceName)
     : service(serviceName), dbusTimeout(0), dbus(QDBusConnection::systemBus())
 {
     if (!dbus.isConnected())
-        qDaemonLog(QStringLiteral("Can't connect to the DBus system bus (%1)").arg(dbus.lastError().message()), QDaemonLog::ErrorEntry);
+        lastError = QT_DAEMON_TRANSLATE("Can't connect to the D-Bus system bus. D-Bus error: %1").arg(dbus.lastError().message());
 }
 
 QDaemonDBusInterface::~QDaemonDBusInterface()
@@ -132,31 +131,22 @@ bool QDaemonDBusInterface::open(const OpenFlags & flags)
         while (!dbusTimeoutTimer.hasExpired(dbusTimeout) && !open(newFlags))
             QThread::msleep(dbusPollTime);  // Wait some time before retrying
 
-        return isValid();
+        if (!isValid())  {
+            lastError = QT_DAEMON_TRANSLATE("Couldn't acquire the D-Bus service interface %1. Operation timed out.").arg(service);
+            return false;
+        }
+
+        return true;
     }
 
     interface.reset(new QDBusInterface(service, objectPath, controlInterface, dbus));
     if (!interface->isValid())  {
+        lastError = QT_DAEMON_TRANSLATE("Couldn't acquire the D-Bus service interface %1.").arg(service);
         interface.reset();
         return false;
     }
 
     return true;
-}
-
-void QDaemonDBusInterface::close()
-{
-    interface.reset();
-}
-
-bool QDaemonDBusInterface::isValid() const
-{
-    return dbus.isConnected() && !interface.isNull();
-}
-
-QString QDaemonDBusInterface::error() const
-{
-    return dbus.lastError().message();
 }
 
 QT_DAEMON_END_NAMESPACE

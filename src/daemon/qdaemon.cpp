@@ -29,19 +29,31 @@
 #include "QtDaemon/qdaemon.h"
 #include "QtDaemon/private/qdaemon_p.h"
 
-#include <QCoreApplication>
+#include <QtCore/qcoreapplication.h>
 
 QT_DAEMON_BEGIN_NAMESPACE
 
-QDaemon::QDaemon(const QString & name)
-    : QObject(qApp), d_ptr(new QDaemonPrivate(name, this))
+QDaemon::QDaemon(const QString & name, QObject * parent)
+    : QObject(parent), d_ptr(new QDaemonPrivate(name, this))
 {
     Q_ASSERT_X(qApp, Q_FUNC_INFO, "You must create the application object first.");
 
-    d_ptr->state.load();
+    if (!d_ptr->state.load())  {
+        QString errorText = QT_DAEMON_TRANSLATE("Couldn't load the daemon configuration.");
+        QMetaObject::invokeMethod(this, "error", Qt::QueuedConnection, Q_ARG(const QString &, errorText));
+        qApp->quit();
+
+        return;
+    }
 
     QObject::connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(_q_stop()));
     QMetaObject::invokeMethod(this, "_q_start", Qt::QueuedConnection);     // Queue the daemon start up for when the application is ready
+}
+
+bool QDaemon::isValid() const
+{
+    Q_D(const QDaemon);
+    return d->state.isLoaded();
 }
 
 QString QDaemon::directoryPath() const

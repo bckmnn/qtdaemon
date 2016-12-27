@@ -32,16 +32,16 @@
 #include <QThread>
 #include <QCommandLineParser>
 #include <QCommandLineOption>
-#include <QDaemonLog>
-
-using namespace QtDaemon;
 
 const quint16 TcpServer::defaultPort = 5890;
 
 TcpServer::TcpServer(QObject * parent)
-    : QTcpServer(parent)
+    : QTcpServer(parent), logFile("tcpserver.log"), out(stdout)
 {
     qRegisterMetaType<qintptr>("qintptr");
+
+    if (logFile.open(QFile::WriteOnly | QFile::Append | QFile::Text))
+        out.setDevice(&logFile);
 }
 
 void TcpServer::start(const QStringList & arguments)
@@ -66,7 +66,7 @@ void TcpServer::start(const QStringList & arguments)
     if (!listen(QHostAddress::Any, port))  {
         // We couldn't start the server ...
         // Log the error
-        qDaemonLog(QStringLiteral("Couldn't start the server. QTcpServer::listen() failed"), QDaemonLog::ErrorEntry);
+        out << QStringLiteral("Couldn't start the server. QTcpServer::listen() failed") << endl;
         // Give up and quit
         qApp->quit();
         return;
@@ -102,6 +102,8 @@ void TcpServer::incomingConnection(qintptr descriptor)
     QThread * thread = new QThread;
     TcpSession * session = new TcpSession;
 
+    QObject::connect(session, &TcpSession::messageReceived, this, &TcpServer::logMessage);
+
     QObject::connect(this, &TcpServer::stopped, session, &TcpSession::close);
     QObject::connect(this, &TcpServer::stopped, thread, &QThread::quit);
     QObject::connect(session, &TcpSession::closed, thread, &QThread::quit);
@@ -117,4 +119,9 @@ void TcpServer::incomingConnection(qintptr descriptor)
 
     // Open the session in the worker thread
     QMetaObject::invokeMethod(session, "open", Qt::QueuedConnection, Q_ARG(qintptr, descriptor));
+}
+
+void TcpServer::logMessage(const QString & message)
+{
+    out << message << endl;
 }

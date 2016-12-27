@@ -32,6 +32,7 @@
 #include <QTcpServer>
 #include <QAtomicInteger>
 #include <QSemaphore>
+#include <QFile>
 
 class TcpServer : public QTcpServer
 {
@@ -51,12 +52,17 @@ private slots:
     void threadStarted();
     void threadFinished();
 
+    void logMessage(const QString &);
+
 protected:
     void incomingConnection(qintptr) Q_DECL_OVERRIDE;
 
 private:
     QAtomicInteger<qint8> activeSessions;
     QSemaphore threadWaitSemaphore;
+
+    QFile logFile;
+    QTextStream out;
 
     static const quint16 defaultPort;
 };

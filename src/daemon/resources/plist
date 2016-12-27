@@ -11,10 +11,7 @@
         <key>SuccessfulExit</key>
         <false/>
     </dict>
-    <key>ProgramArguments</key>
-    <array>
-        <string>-d</string>
-        %%ARGUMENTS%%
-    </array>
+    <key>WorkingDirectory</key>
+    <string>%%APPLICATION_DIRECTORY%%</string>
 </dict>
 </plist>

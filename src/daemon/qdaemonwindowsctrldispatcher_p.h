@@ -40,7 +40,7 @@
 #ifndef QDAEMONWINDOWSCTRLDISPATCHER_P_H
 #define QDAEMONWINDOWSCTRLDISPATCHER_P_H
 
-#include "qdaemon_global.h"
+#include "QtDaemon/qdaemon_global.h"
 
 #include <QtCore/qthread.h>
 #include <QtCore/qsemaphore.h>

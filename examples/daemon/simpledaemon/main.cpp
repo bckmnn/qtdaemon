@@ -40,12 +40,13 @@ int main(int argc, char ** argv)
     QDaemonApplication::setApplicationDescription("The Simple Daemon example shows the basic requirements for creating a daemon");
     QDaemonApplication::setOrganizationDomain("qtdaemon.examples");
 
-    SimpleDaemon controller(&app);
-    QObject::connect(&app, &QDaemonApplication::daemonized, &controller, &SimpleDaemon::onDaemonReady);
+    SimpleDaemon controller;
+    QObject::connect(&app, &QDaemonApplication::ready, &controller, &SimpleDaemon::onDaemonReady);
     QObject::connect(&app, &QDaemonApplication::started, &controller, &SimpleDaemon::onStarted);
     QObject::connect(&app, &QDaemonApplication::stopped, &controller, &SimpleDaemon::onStopped);
     QObject::connect(&app, &QDaemonApplication::installed, &controller, &SimpleDaemon::onInstalled);
     QObject::connect(&app, &QDaemonApplication::uninstalled, &controller, &SimpleDaemon::onUninstalled);
+    QObject::connect(&app, &QDaemonApplication::error, &controller, &SimpleDaemon::onError);
 
     return QDaemonApplication::exec();
 }

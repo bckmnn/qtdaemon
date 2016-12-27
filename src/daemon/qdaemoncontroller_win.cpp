@@ -26,7 +26,6 @@
 **
 ****************************************************************************/
 
-#include "qdaemonlog.h"
 #include "QtDaemon/private/qdaemoncontroller_p.h"
 #include "QtDaemon/private/qwindowsservicemanager_p.h"
 

@@ -2,6 +2,7 @@
 #define QDAEMON_GLOBAL_H
 
 #include <QtCore/qglobal.h>
+#include <QtCore/qmetatype.h>
 
 // Namespace utilities
 #define QT_DAEMON_NAMESPACE QtDaemon
@@ -51,6 +52,12 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(QDaemonFlags)
 QDataStream & operator << (QDataStream & out, const QDaemonFlags &);
 QDataStream & operator >> (QDataStream & in, QDaemonFlags &);
 
+#ifdef QT_BUILD_DAEMON_LIB
+#define QT_DAEMON_TRANSLATE(text) QCoreApplication::translate("QtDaemon", QT_TRANSLATE_NOOP("QtDaemon", text))
+#endif
+
 QT_DAEMON_END_NAMESPACE
+
+Q_DECLARE_METATYPE(QT_DAEMON_PREPEND_NAMESPACE(DaemonStatus))
 
 #endif // QDAEMON_GLOBAL_H

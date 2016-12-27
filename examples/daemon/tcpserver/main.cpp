@@ -42,7 +42,7 @@ int main(int argc, char ** argv)
 
     TcpServer tcpServer(&app);
 
-    QObject::connect(&app, &QDaemonApplication::daemonized, &tcpServer, &TcpServer::start);
+    QObject::connect(&app, &QDaemonApplication::ready, &tcpServer, &TcpServer::start);
     QObject::connect(&app, &QDaemonApplication::aboutToQuit, &tcpServer, &TcpServer::stop);
 
     return QDaemonApplication::exec();

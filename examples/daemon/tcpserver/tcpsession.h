@@ -49,6 +49,7 @@ private slots:
 signals:
     void opened();
     void closed();
+    void messageReceived(const QString &);
 
 private:
     QTcpSocket socket;

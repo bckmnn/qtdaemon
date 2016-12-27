@@ -26,25 +26,31 @@
 **
 ****************************************************************************/
 
-#include "qdaemon_p.h"
-#include "qdaemon.h"
-#include "qdaemondbusinterface_p.h"
-#include "qdaemonlog.h"
+#include "QtDaemon/qdaemon.h"
+#include "QtDaemon/private/qdaemon_p.h"
+#include "QtDaemon/private/qdaemondbusinterface_p.h"
 
-#include <QCoreApplication>
+#include <QtCore/qmetaobject.h>
 
 QT_DAEMON_BEGIN_NAMESPACE
 
 void QDaemonPrivate::_q_start()
 {
-    // Create the DBus service
-    if (!state.isLoaded() || !dbus.create(state.service()))  {
+    Q_Q(QDaemon);
+
+    // Try to create the DBus service
+    if (!dbus.create(state.service()))  {
+        QMetaObject::invokeMethod(q, "error", Qt::QueuedConnection, Q_ARG(const QString &, dbus.error()));
         qApp->quit();
+
         return;
     }
 
     // Just emit the ready signal, nothing more to do here
-    QMetaObject::invokeMethod(q_func(), "ready", Qt::QueuedConnection, Q_ARG(const QStringList &, qApp->arguments()));
+    QStringList arguments;
+    arguments << state.executable() << state.arguments();
+
+    QMetaObject::invokeMethod(q, "ready", Qt::QueuedConnection, Q_ARG(const QStringList &, arguments));
 }
 
 void QDaemonPrivate::_q_stop()

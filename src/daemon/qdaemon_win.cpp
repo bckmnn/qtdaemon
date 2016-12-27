@@ -26,8 +26,9 @@
 **
 ****************************************************************************/
 
-#include "qdaemon.h"
-#include "qdaemon_p.h"
+#include "QtDaemon/qdaemon.h"
+#include "QtDaemon/private/qdaemon_p.h"
+
 #include <QtCore/qcoreapplication.h>
 
 QT_DAEMON_BEGIN_NAMESPACE
@@ -40,14 +41,15 @@ void QDaemonPrivate::_q_start()
     }
 
     // Just emit the ready signal, nothing more to do here
-    QMetaObject::invokeMethod(q_func(), "ready", Qt::QueuedConnection, Q_ARG(const QStringList &, state.arguments()));
+    QStringList arguments;
+    arguments << state.executable() << state.arguments();
+
+    QMetaObject::invokeMethod(q_func(), "ready", Qt::QueuedConnection, Q_ARG(const QStringList &, arguments));
 }
 
 void QDaemonPrivate::_q_stop()
 {
     ctrl.stopService();
 }
-
-
 
 QT_DAEMON_END_NAMESPACE

@@ -29,7 +29,6 @@
 #include "tcpsession.h"
 
 #include <QDaemonApplication>
-#include <QDaemonLog>
 
 using namespace QtDaemon;
 
@@ -62,5 +61,5 @@ void TcpSession::readSocketData()
     else if (message.trimmed() == "close")
         close();
     else
-        qDaemonLog() << message;
+        emit messageReceived(message);
 }

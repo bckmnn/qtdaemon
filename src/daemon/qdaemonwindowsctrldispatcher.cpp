@@ -26,8 +26,7 @@
 **
 ****************************************************************************/
 
-#include "qdaemonwindowsctrldispatcher_p.h"
-#include "qdaemonlog.h"
+#include "QtDaemon/private/qdaemonwindowsctrldispatcher_p.h"
 
 #include <QtCore/qcoreapplication.h>
 

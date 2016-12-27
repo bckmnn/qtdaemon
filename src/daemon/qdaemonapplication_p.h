@@ -40,15 +40,9 @@
 #ifndef QDAEMONAPPLICATION_P_H
 #define QDAEMONAPPLICATION_P_H
 
-#include "qdaemon_global.h"
-#include "qdaemonlog.h"
-
-#include <QCommandLineParser>
-#include <QCommandLineOption>
+#include "QtDaemon/qdaemon_global.h"
 
 QT_DAEMON_BEGIN_NAMESPACE
-
-class QAbstractDaemonBackend;
 
 class QDaemonApplication;
 class Q_DAEMON_LOCAL QDaemonApplicationPrivate
@@ -59,18 +53,12 @@ public:
     ~QDaemonApplicationPrivate();
 
 private:
-    int exec();
+    void _q_daemon_exec();
 
     static void processSignalHandler(int);
 
 private:
-    QAbstractDaemonBackend * createBackend(bool);
-
-private:
     QDaemonApplication * q_ptr;
-    bool autoQuit;
-    QCommandLineParser parser;
-
     static QString description;
 };
 

@@ -81,6 +81,7 @@ public:
 private:
     QDaemonController * q_ptr;
     QDaemonState state;
+    QString lastError;
 };
 
 QT_DAEMON_END_NAMESPACE

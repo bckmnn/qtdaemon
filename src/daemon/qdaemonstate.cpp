@@ -26,13 +26,13 @@
 **
 ****************************************************************************/
 
-#include "qdaemonstate_p.h"
+#include "QtDaemon/private/qdaemonstate_p.h"
 
-#include <QCoreApplication>
-#include <QSettings>
-#include <QFileInfo>
-#include <QDir>
-#include <QDataStream>
+#include <QtCore/qcoreapplication.h>
+#include <QtCore/qsettings.h>
+#include <QtCore/qfileinfo.h>
+#include <QtCore/qdir.h>
+#include <QtCore/qdatastream.h>
 
 QT_DAEMON_BEGIN_NAMESPACE
 
@@ -107,6 +107,18 @@ QString QDaemonState::initdScriptPath() const
     return initdPrefix.filePath(d.executable);
 }
 
+void QDaemonState::generatePListPath()
+{
+    if (d.flags.testFlag(AgentFlag))  {
+        if (d.flags.testFlag(UserAgentFlag))
+            d.plistPath = QStringLiteral("%1/Library/LaunchAgents").arg(QDir::homePath());
+        else
+            d.plistPath = QStringLiteral("/Library/LaunchAgents");
+    }
+    else
+        d.plistPath = QStringLiteral("/Library/LaunchDaemons");
+}
+
 bool QDaemonState::load()
 {
     QString organizationName = QCoreApplication::organizationName();
@@ -126,10 +138,12 @@ bool QDaemonState::load()
     d.arguments = settings.value(QStringLiteral("Arguments")).value<QStringList>();
     d.flags = settings.value(QStringLiteral("Flags")).value<QDaemonFlags>();
 
-#ifdef Q_OS_LINUX
+#if defined(Q_OS_LINUX)
     d.initdPrefix = settings.value(QStringLiteral("InitDPrefix")).value<QString>();
     d.dbusPrefix = settings.value(QStringLiteral("DBusPrefix")).value<QString>();
     d.dbusTimeout = settings.value(QStringLiteral("DBusTimeout")).value<qint32>();
+#elif defined(Q_OS_OSX)
+    d.plistPath = settings.value(QStringLiteral("PListFilePath")).value<QString>();
 #endif
 
     loaded = !d.path.isEmpty() && !d.executable.isEmpty() && !d.directory.isEmpty() && !d.service.isEmpty();
@@ -152,10 +166,12 @@ bool QDaemonState::save() const
     settings.setValue(QStringLiteral("Arguments"), d.arguments);
     settings.setValue(QStringLiteral("Flags"), QVariant::fromValue(d.flags));
 
-#ifdef Q_OS_LINUX
+#if defined (Q_OS_LINUX)
     settings.setValue(QStringLiteral("InitDPrefix"), d.initdPrefix);
     settings.setValue(QStringLiteral("DBusPrefix"), d.dbusPrefix);
     settings.setValue(QStringLiteral("DBusTimeout"), d.dbusTimeout);
+#elif defined(Q_OS_OSX)
+    settings.setValue(QStringLiteral("PListFilePath"), d.plistPath);
 #endif
 
     return true;

@@ -42,11 +42,11 @@
 
 #include "QtDaemon/qdaemon_global.h"
 
-#include <QObject>
+#include <QtCore/qobject.h>
 
-#include <QDBusConnection>
-#include <QDBusAbstractInterface>
-#include <QDBusReply>
+#include <QtDBus/qdbusconnection.h>
+#include <QtDBus/qdbusabstractinterface.h>
+#include <QtDBus/qdbusreply.h>
 
 QT_BEGIN_NAMESPACE
 class QDBusAbstractInterface;
@@ -73,8 +73,11 @@ public:
     Q_INVOKABLE bool isRunning() const;
     Q_INVOKABLE bool stop();
 
+    QString error() const;
+
 private:
     QString service;
+    QString lastError;
     QDBusConnection dbus;
 
 };
@@ -105,6 +108,7 @@ public:
 
 private:
     QString service;
+    QString lastError;
     qint32 dbusTimeout;
     QDBusConnection dbus;
     QScopedPointer<QDBusAbstractInterface> interface;
@@ -114,6 +118,25 @@ private:
 Q_DECLARE_OPERATORS_FOR_FLAGS(QDaemonDBusInterface::OpenFlags)
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------- //
+inline QString QDaemonDBusInterfaceProvider::error() const
+{
+    return lastError;
+}
+
+inline void QDaemonDBusInterface::close()
+{
+    interface.reset();
+}
+
+inline bool QDaemonDBusInterface::isValid() const
+{
+    return dbus.isConnected() && !interface.isNull();
+}
+
+inline QString QDaemonDBusInterface::error() const
+{
+    return lastError;
+}
 
 template <class T>
 inline QDBusReply<T> QDaemonDBusInterface::call(const QString & method)

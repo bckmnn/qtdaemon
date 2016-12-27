@@ -42,29 +42,24 @@ class Q_DAEMON_EXPORT QDaemonApplication : public QCoreApplication
     Q_DECLARE_PRIVATE(QDaemonApplication)
     Q_DISABLE_COPY(QDaemonApplication)
 
-    Q_PROPERTY(bool autoQuit READ autoQuit WRITE setAutoQuit)
-    Q_PROPERTY(QString applicationDescription READ applicationDescription WRITE setApplicationDescription)
+    Q_PRIVATE_SLOT(d_func(), void _q_daemon_exec())
 
 public:
     QDaemonApplication(int & argc, char ** argv);
     ~QDaemonApplication() Q_DECL_OVERRIDE;
 
-    static int exec();
-    static QDaemonApplication * instance();
-
-    bool autoQuit() const;
-    void setAutoQuit(bool);
-
     static QString applicationDescription();
     static void setApplicationDescription(const QString &);
 
 Q_SIGNALS:
-    void daemonized(const QStringList &);
+    void ready(const QStringList &);
+    void error(const QString &);
 
     void started();
     void stopped();
     void installed();
     void uninstalled();
+    void status(DaemonStatus);
 
 private:
     QDaemonApplicationPrivate * d_ptr;

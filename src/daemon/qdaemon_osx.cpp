@@ -1,8 +1,8 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 Konstantin Shegunov <kshegunov@gmail.com>
+** Copyright (C) 2016 Samuel Gaist <samuel.gaist@edeltech.ch>
 **
-** This file is part of the QtDaemon library.
+** This file is part of the QDaemon library.
 **
 ** The MIT License (MIT)
 **
@@ -26,53 +26,26 @@
 **
 ****************************************************************************/
 
-//
-//  W A R N I N G
-//  -------------
-//
-// This file is not part of the QtDaemon API. It exists only
-// as an implementation detail. This header file may change from
-// version to version without notice, or even be removed.
-//
-// We mean it.
-//
+#include "QtDaemon/qdaemon.h"
+#include "QtDaemon/private/qdaemon_p.h"
 
-#ifndef CONTROLLERBACKEND_LINUX_H
-#define CONTROLLERBACKEND_LINUX_H
-
-#include "QtDaemon/qabstractdaemonbackend.h"
-
-QT_BEGIN_NAMESPACE
-class QDBusAbstractInterface;
-QT_END_NAMESPACE
+#include <QtCore/qmetaobject.h>
 
 QT_DAEMON_BEGIN_NAMESPACE
 
-class Q_DAEMON_LOCAL ControllerBackendLinux : public QAbstractControllerBackend
+void QDaemonPrivate::_q_start()
 {
-    Q_DISABLE_COPY(ControllerBackendLinux)
+    Q_Q(QDaemon);
 
-public:
-    ControllerBackendLinux(QCommandLineParser &, bool);
+    QStringList arguments;
+    arguments << state.executable() << state.arguments();
 
-    bool start() Q_DECL_OVERRIDE;
-    bool stop() Q_DECL_OVERRIDE;
-    bool install() Q_DECL_OVERRIDE;
-    bool uninstall() Q_DECL_OVERRIDE;
-    DaemonStatus status() Q_DECL_OVERRIDE;
+    // Just emit the ready signal, nothing more to do here
+    QMetaObject::invokeMethod(q, "ready", Qt::QueuedConnection, Q_ARG(const QStringList &, arguments));
+}
 
-private:
-    QDBusAbstractInterface * getDBusInterface();
-
-    const QCommandLineOption dbusPrefixOption;
-    const QCommandLineOption initdPrefixOption;
-
-    static const QString initdPrefix;
-    static const QString dbusPrefix;
-    static const QString defaultInitPath;
-    static const QString defaultDBusPath;
-};
+void QDaemonPrivate::_q_stop()
+{
+}
 
 QT_DAEMON_END_NAMESPACE
-
-#endif // CONTROLLERBACKEND_LINUX_H

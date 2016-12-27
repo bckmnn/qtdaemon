@@ -26,40 +26,18 @@
 **
 ****************************************************************************/
 
-#include "qdaemonapplication.h"
-#include "qabstractdaemonbackend.h"
-#include "qdaemonapplication_p.h"
-#include "qdaemonlog_p.h"
+#include "QtDaemon/qdaemonapplication.h"
+#include "QtDaemon/qdaemon.h"
+#include "QtDaemon/qdaemoncontroller.h"
+#include "QtDaemon/private/qdaemonapplication_p.h"
 
-#if defined(Q_OS_WIN)
-#include "daemonbackend_win.h"
-#include "controllerbackend_win.h"
-#elif defined(Q_OS_LINUX)
-#include "daemonbackend_linux.h"
-#include "controllerbackend_linux.h"
-#elif defined(Q_OS_OSX)
-#include "daemonbackend_osx.h"
-#include "controllerbackend_osx.h"
-#else
-#warning This library is not supported on your platform.
-#endif
-
-#include <QScopedPointer>
+#include <QtCore/qtextstream.h>
+#include <QtCore/qcommandlineparser.h>
+#include <QtCore/qcommandlineoption.h>
 
 #include <csignal>
 
 QT_DAEMON_BEGIN_NAMESPACE
-
-#if defined(Q_OS_WIN)
-typedef DaemonBackendWindows DaemonBackend;
-typedef ControllerBackendWindows ControllerBackend;
-#elif defined(Q_OS_LINUX)
-typedef DaemonBackendLinux DaemonBackend;
-typedef ControllerBackendLinux ControllerBackend;
-#elif defined(Q_OS_OSX)
-typedef DaemonBackendOSX DaemonBackend;
-typedef ControllerBackendOSX ControllerBackend;
-#endif
 
 /*!
     \class QDaemonApplication
@@ -80,7 +58,7 @@ typedef ControllerBackendOSX ControllerBackend;
     \sa QCoreApplication
 */
 /*!
-    \fn void QDaemonApplication::daemonized(const QStringList & arguments)
+    \fn void QDaemonApplication::ready(const QStringList & arguments)
 
     This signal is emitted when the process has been daemonized.
     The string list argument \a arguments is a proper command line that
@@ -115,7 +93,7 @@ typedef ControllerBackendOSX ControllerBackend;
     Constructs the daemon application object.
 
     The \a argc and \a argv arguments are processed by the application and are
-    made available through the \l{QDaemonApplication::}{daemonized()} signal.
+    made available through the \l{QDaemonApplication::}{ready()} signal.
 
     \warning The data referred to by \a argc and \a argv must stay valid
     for the entire lifetime of the application object.
@@ -126,6 +104,9 @@ typedef ControllerBackendOSX ControllerBackend;
 QDaemonApplication::QDaemonApplication(int & argc, char ** argv)
     : QCoreApplication(argc, argv), d_ptr(new QDaemonApplicationPrivate(this))
 {
+    qRegisterMetaType<QtDaemon::DaemonStatus>();
+
+    QMetaObject::invokeMethod(this, "_q_daemon_exec", Qt::QueuedConnection);
 }
 
 /*!
@@ -134,77 +115,6 @@ QDaemonApplication::QDaemonApplication(int & argc, char ** argv)
 QDaemonApplication::~QDaemonApplication()
 {
     delete d_ptr;
-}
-
-/*!
-    Starts the application event loop and executes the daemon application.
-
-    \sa quit(), exit(), processEvents(), QCoreApplication::exec()
-*/
-int QDaemonApplication::exec()
-{
-    // Just check if someone forgot to create the application object
-    QDaemonApplication * app = QDaemonApplication::instance();
-    if (Q_UNLIKELY(!app))  {
-        qWarning("You must construct a QDaemonApplication before calling QDaemonApplication::exec.");
-        return -1;
-    }
-
-    QStringList arguments = QDaemonApplication::arguments();
-    QDaemonApplicationPrivate * const d = app->d_ptr;
-
-    QCommandLineOption daemonOption(QStringLiteral("d"));
-    daemonOption.setHidden(true);
-
-    d->parser.addOption(daemonOption);
-    d->parser.parse(arguments);
-
-    // Create the appropriate backend
-    bool isDaemon = d->parser.isSet(daemonOption);
-    QScopedPointer<QAbstractDaemonBackend> backend(d->createBackend(isDaemon));
-
-    // Reparse with the options that the backends may have added in their constructors
-    d->parser.parse(arguments);
-
-    return backend->exec();
-}
-
-/*!
-    Returns a pointer to the application's QDaemonApplication instance.
-
-    If no instance has been created, \c null is returned.
-*/
-QDaemonApplication * QDaemonApplication::instance()
-{
-    return qobject_cast<QDaemonApplication *>(QCoreApplication::instance());
-}
-
-/*!
-    \property QDaemonApplication::autoQuit
-    \brief Holds whether the daemon application should automatically exit the event loop.
-
-    If the property is set to \c true and the application process is running as control terminal
-    the application will quit automatically after emitting the proper signal or reporting errors.
-
-    In case you need to attach some code that should be run after the daemon has started/stopped
-    or after it has been installed/uninstalled you can disable the controlling process' auto
-    quit feature and subscribe to the appropriate signal.
-
-    By default this property is \c true.
-
-    \note The property is enforced to \c false when the application is run with \c --fake.
-    \note The property is enforced to \c true when the command line help is requested.
-*/
-bool QDaemonApplication::autoQuit() const
-{
-    Q_D(const QDaemonApplication);
-    return d->autoQuit;
-}
-
-void QDaemonApplication::setAutoQuit(bool enable)
-{
-    Q_D(QDaemonApplication);
-    d->autoQuit = enable;
 }
 
 /*!
@@ -229,15 +139,119 @@ void QDaemonApplication::setApplicationDescription(const QString & description)
 QString QDaemonApplicationPrivate::description;
 
 QDaemonApplicationPrivate::QDaemonApplicationPrivate(QDaemonApplication * q)
-    : q_ptr(q), autoQuit(true)
+    : q_ptr(q)
 {
-    std::signal(SIGTERM, QDaemonApplicationPrivate::processSignalHandler);
-    std::signal(SIGINT, QDaemonApplicationPrivate::processSignalHandler);
-    std::signal(SIGSEGV, QDaemonApplicationPrivate::processSignalHandler);
 }
 
 QDaemonApplicationPrivate::~QDaemonApplicationPrivate()
 {
+}
+
+void QDaemonApplicationPrivate::_q_daemon_exec()
+{
+    Q_Q(QDaemonApplication);
+
+    QStringList arguments = QDaemonApplication::arguments();
+    if (arguments.empty())  {
+        QDaemon * daemon = new QDaemon(QCoreApplication::applicationName(), q);
+        if (daemon->isValid())  {
+            // Connect the signal handlers
+            std::signal(SIGTERM, QDaemonApplicationPrivate::processSignalHandler);
+            std::signal(SIGINT, QDaemonApplicationPrivate::processSignalHandler);
+            std::signal(SIGSEGV, QDaemonApplicationPrivate::processSignalHandler);
+
+            // Connect the daemon signals/slots
+            QObject::connect(daemon, &QDaemon::ready, q, &QDaemonApplication::ready);
+            QObject::connect(daemon, &QDaemon::error, q, &QDaemonApplication::error);
+
+            return;
+        }
+
+        arguments.append(QStringLiteral("--help")); // The daemon's not installed, just show the help
+    }
+
+    QCommandLineParser parser;
+
+    const QCommandLineOption install(QStringList() << QStringLiteral("i") << QStringLiteral("install"), QCoreApplication::translate("main", "Install the daemon"));
+    const QCommandLineOption uninstall(QStringList() << QStringLiteral("u") << QStringLiteral("uninstall"), QCoreApplication::translate("main", "Uninstall the daemon"));
+    const QCommandLineOption start(QStringList() << QStringLiteral("s") << QStringLiteral("start"), QCoreApplication::translate("main", "Start the daemon"));
+    const QCommandLineOption stop(QStringList() << QStringLiteral("t") << QStringLiteral("stop"), QCoreApplication::translate("main", "Stop the daemon"));
+    const QCommandLineOption status(QStringLiteral("status"), QCoreApplication::translate("main", "Check the daemon status"));
+
+    // TODO: discuss adding the --fake option
+
+    parser.addOption(install);
+    parser.addOption(uninstall);
+    parser.addOption(start);
+    parser.addOption(stop);
+    parser.addOption(status);
+    parser.addHelpOption();
+
+#if defined(Q_OS_WIN)
+    const QCommandLineOption updatePath(QStringLiteral("update-path"), QCoreApplication::translate("main", "Update the system PATH on install/uninstall."));
+    parser.addOption(updatePath);
+#elif defined(Q_OS_LINUX)
+    const QCommandLineOption initdPrefix(QStringLiteral("initd-prefix"), QCoreApplication::translate("main", "Sets the path for the installed init.d script"), QCoreApplication::translate("main", "path"), QStringLiteral("/etc/init.d"));
+    const QCommandLineOption dbusPrefix(QStringLiteral("dbus-prefix"), QCoreApplication::translate("main", "Sets the path for the installed dbus configuration file"), QCoreApplication::translate("main", "path"), QStringLiteral("/etc/dbus-1/system.d"));
+    parser.addOption(initdPrefix);
+    parser.addOption(dbusPrefix);
+#elif defined(Q_OS_OSX)
+    const QCommandLineOption agent(QStringLiteral("agent"), QCoreApplication::translate("main", "Sets the daemon as an agent"));
+    const QCommandLineOption userAgent(QStringLiteral("user"), QCoreApplication::translate("main", "Sets the agent as user local (affects only the agent option)"));
+    parser.addOption(agent);
+    parser.addOption(userAgent);
+#endif
+
+    parser.parse(arguments);
+
+    // Check the flags first
+    QDaemonFlags flags;
+#if defined(Q_OS_WIN)
+    if (parser.isSet(updatePath))
+        flags |= QtDaemon::UpdatePathFlag;
+#elif defined(Q_OS_OSX)
+    if (parser.isSet(agent))  {
+        flags |= QtDaemon::AgentFlag;
+        if (parser.isSet(userAgent))
+            flags |= QtDaemon::UserAgentFlag;
+    }
+#endif
+
+    // Initialize the controller
+    QDaemonController controller(QCoreApplication::applicationName());
+    controller.setFlags(flags);
+#if defined(Q_OS_LINUX)
+    controller.setInitScriptPrefix(parser.value(initdPrefix));
+    controller.setDBusConfigurationPrefix(parser.value(dbusPrefix));
+#endif
+    controller.setDescription(description);
+
+    // Proceed with parsing the main CL option
+    if (parser.isSet(install) && controller.install(QCoreApplication::applicationFilePath(), parser.positionalArguments()))
+        QMetaObject::invokeMethod(q, "installed", Qt::QueuedConnection);
+    else if (parser.isSet(uninstall) && controller.uninstall())
+        QMetaObject::invokeMethod(q, "uninstalled", Qt::QueuedConnection);
+    else if (parser.isSet(start))  {
+        QStringList arguments = parser.positionalArguments();
+        if (arguments.isEmpty() ? controller.start() : controller.start(arguments))
+            QMetaObject::invokeMethod(q, "started", Qt::QueuedConnection);
+    }
+    else if (parser.isSet(stop) && controller.stop())
+        QMetaObject::invokeMethod(q, "stopped", Qt::QueuedConnection);
+    else if (parser.isSet(status))  {
+        QtDaemon::DaemonStatus daemonStatus = controller.status();
+        QMetaObject::invokeMethod(q, "status", Qt::QueuedConnection, Q_ARG(QtDaemon::DaemonStatus, daemonStatus));
+    }
+    else  {
+        QTextStream out(stdout);
+        out << parser.helpText();
+    }
+
+    QString errorText = controller.lastError();
+    if (!errorText.isEmpty())
+        QMetaObject::invokeMethod(q, "error", Qt::QueuedConnection, Q_ARG(const QString &, errorText));
+
+    q->quit();
 }
 
 void QDaemonApplicationPrivate::processSignalHandler(int signalNumber)
@@ -249,7 +263,7 @@ void QDaemonApplicationPrivate::processSignalHandler(int signalNumber)
     case SIGTERM:
     case SIGINT:
         {
-            QDaemonApplication * app = QDaemonApplication::instance();
+            QCoreApplication * app = QCoreApplication::instance();
             if (app)
                 app->quit();
             else
@@ -261,14 +275,6 @@ void QDaemonApplicationPrivate::processSignalHandler(int signalNumber)
     }
 }
 
-QAbstractDaemonBackend * QDaemonApplicationPrivate::createBackend(bool isDaemon)
-{
-    if (isDaemon)  {
-        qDaemonLog().setLogType(QDaemonLog::LogToFile);
-        return new DaemonBackend(parser);
-    }
-    else
-        return new ControllerBackend(parser, autoQuit);
-}
-
 QT_DAEMON_END_NAMESPACE
+
+#include "moc_qdaemonapplication.cpp"
