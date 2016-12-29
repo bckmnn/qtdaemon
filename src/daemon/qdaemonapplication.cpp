@@ -104,7 +104,7 @@ QT_DAEMON_BEGIN_NAMESPACE
 QDaemonApplication::QDaemonApplication(int & argc, char ** argv)
     : QCoreApplication(argc, argv), d_ptr(new QDaemonApplicationPrivate(this))
 {
-    qRegisterMetaType<QtDaemon::DaemonStatus>();
+    qRegisterMetaType<DaemonStatus>();
 
     QMetaObject::invokeMethod(this, "_q_daemon_exec", Qt::QueuedConnection);
 }
@@ -167,16 +167,17 @@ void QDaemonApplicationPrivate::_q_daemon_exec()
             return;
         }
 
-        arguments.append(QStringLiteral("--help")); // The daemon's not installed, just show the help
+        q->quit();
+        return;
     }
 
     QCommandLineParser parser;
 
-    const QCommandLineOption install(QStringList() << QStringLiteral("i") << QStringLiteral("install"), QCoreApplication::translate("main", "Install the daemon"));
-    const QCommandLineOption uninstall(QStringList() << QStringLiteral("u") << QStringLiteral("uninstall"), QCoreApplication::translate("main", "Uninstall the daemon"));
-    const QCommandLineOption start(QStringList() << QStringLiteral("s") << QStringLiteral("start"), QCoreApplication::translate("main", "Start the daemon"));
-    const QCommandLineOption stop(QStringList() << QStringLiteral("t") << QStringLiteral("stop"), QCoreApplication::translate("main", "Stop the daemon"));
-    const QCommandLineOption status(QStringLiteral("status"), QCoreApplication::translate("main", "Check the daemon status"));
+    const QCommandLineOption install(QStringList() << QT_DAEMON_TRANSLATE("i") << QT_DAEMON_TRANSLATE("install"), QT_DAEMON_TRANSLATE("Install the daemon"));
+    const QCommandLineOption uninstall(QStringList() << QT_DAEMON_TRANSLATE("u") << QT_DAEMON_TRANSLATE("uninstall"), QT_DAEMON_TRANSLATE("Uninstall the daemon"));
+    const QCommandLineOption start(QStringList() << QT_DAEMON_TRANSLATE("s") << QT_DAEMON_TRANSLATE("start"), QT_DAEMON_TRANSLATE("Start the daemon"));
+    const QCommandLineOption stop(QStringList() << QT_DAEMON_TRANSLATE("t") << QT_DAEMON_TRANSLATE("stop"), QT_DAEMON_TRANSLATE("Stop the daemon"));
+    const QCommandLineOption status(QT_DAEMON_TRANSLATE("status"), QT_DAEMON_TRANSLATE("Check the daemon status"));
 
     // TODO: discuss adding the --fake option
 
