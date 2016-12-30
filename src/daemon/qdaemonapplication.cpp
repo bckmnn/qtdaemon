@@ -166,6 +166,8 @@ void QDaemonApplicationPrivate::_q_daemon_exec()
             return;
         }
 
+        delete daemon;
+
         arguments << QStringLiteral("--help");  // The daemon is not installed, just show the help
     }
 

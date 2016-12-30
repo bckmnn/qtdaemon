@@ -41,7 +41,7 @@ QDaemon::QDaemon(const QString & name, QObject * parent)
     if (!d_ptr->state.load())  {
         QString errorText = QT_DAEMON_TRANSLATE("Couldn't load the daemon configuration.");
         QMetaObject::invokeMethod(this, "error", Qt::QueuedConnection, Q_ARG(const QString &, errorText));
-        qApp->quit();
+        QObject::connect(this, &QDaemon::error, qApp, &QCoreApplication::quit, Qt::QueuedConnection);
 
         return;
     }
