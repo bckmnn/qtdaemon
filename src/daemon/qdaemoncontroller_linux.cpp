@@ -61,7 +61,7 @@ bool QDaemonControllerPrivate::start()
     // Repeat the call to make sure the communication is ok
     dbus.setTimeout(state.dbusTimeout() * 1000);
     if (!dbus.open(QDaemonDBusInterface::AutoRetryFlag))  {
-        lastError = QT_DAEMON_TRANSLATE("Connection with the daemon couldn't be established. (DBus error: %1)").arg(dbus.error());
+        lastError = QT_DAEMON_TRANSLATE("Connection with the daemon couldn't be established. (DBus error: \"%1\")").arg(dbus.error());
         return false;
     }
 
@@ -73,7 +73,7 @@ bool QDaemonControllerPrivate::stop()
 {
     QDaemonDBusInterface dbus(state.service());
     if (!dbus.open())  {
-        lastError = QT_DAEMON_TRANSLATE("Couldn't acquire the D-Bus interface. Is the daemon running? (DBus error: %1)").arg(dbus.error());
+        lastError = QT_DAEMON_TRANSLATE("Couldn't acquire the D-Bus interface. Is the daemon running? (DBus error: \"%1\")").arg(dbus.error());
         return false;
     }
 
@@ -85,31 +85,31 @@ bool QDaemonControllerPrivate::install()
 {
     QString dbusFilePath = state.dbusConfigPath(), initdFilePath = state.initdScriptPath();
     if (dbusFilePath.isEmpty())  {
-        lastError = QT_DAEMON_TRANSLATE("The provided D-Bus configuration path %1 is invalid").arg(dbusFilePath);
+        lastError = QT_DAEMON_TRANSLATE("The provided D-Bus prefix path \"%1\" is invalid").arg(state.dbusPrefix());
         return false;
     }
     if (initdFilePath.isEmpty())  {
-        lastError = QT_DAEMON_TRANSLATE("The provided init.d configuration path %1 is invalid").arg(initdFilePath);
+        lastError = QT_DAEMON_TRANSLATE("The provided init.d prefix path \"%1\" is invalid").arg(state.initdPrefix());
         return false;
     }
 
     QFile dbusConf(dbusFilePath), initdFile(initdFilePath);
     if (dbusConf.exists())  {
-        lastError = QT_DAEMON_TRANSLATE("The D-Bus configuration directory %1 already contains a configuration for this service.").arg(dbusFilePath);
+        lastError = QT_DAEMON_TRANSLATE("The D-Bus configuration directory \"%1\" already contains a configuration for this service.").arg(state.dbusPrefix());
         return false;
     }
     if (initdFile.exists())  {
-        lastError = QT_DAEMON_TRANSLATE("The provided init.d directory %1 already contains a script for this service.").arg(initdFilePath);
+        lastError = QT_DAEMON_TRANSLATE("The provided init.d directory \"%1\" already contains a script for this service.").arg(state.initdPrefix());
         return false;
     }
 
     if (!dbusConf.open(QFile::WriteOnly | QFile::Text))  {
-        lastError = QT_DAEMON_TRANSLATE("Couldn't open the D-Bus configuration file %1 for writing.").arg(dbusFilePath);
+        lastError = QT_DAEMON_TRANSLATE("Couldn't open the D-Bus configuration file \"%1\" for writing. Check your permissions.").arg(dbusFilePath);
         return false;
     }
 
     if (!initdFile.open(QFile::WriteOnly | QFile::Text))  {
-        lastError = QT_DAEMON_TRANSLATE("Couldn't open the init.d script %1 for writing.").arg(initdFilePath);
+        lastError = QT_DAEMON_TRANSLATE("Couldn't open the init.d script \"%1\" for writing. Check your permissions.").arg(initdFilePath);
         dbusConf.remove();		// Remove the created dbus configuration
         return false;
     }
@@ -157,32 +157,33 @@ bool QDaemonControllerPrivate::install()
     if (!initdFile.setPermissions(QFile::WriteOwner | QFile::ExeOwner | QFile::ReadOwner | QFile::ReadGroup | QFile::ExeGroup | QFile::ReadOther | QFile::ExeOther))
         lastError = QT_DAEMON_TRANSLATE("An error occured while setting the permissions for the init.d script. Installation may be broken.");
 
-    return state.save();
+    return true;
 }
 
 bool QDaemonControllerPrivate::uninstall()
 {
     QString dbusFilePath = state.dbusConfigPath(), initdFilePath = state.initdScriptPath();
 
+    bool ok = true;
+
     QFile dbusConf(dbusFilePath), initdFile(initdFilePath);
     if (dbusFilePath.isEmpty() || (dbusConf.exists() && !dbusConf.remove()))  {
-        lastError = QT_DAEMON_TRANSLATE("Couldn't remove the D-Bus configuration file %1 for this service.").arg(dbusFilePath);
-        return false;
+        lastError = QT_DAEMON_TRANSLATE("Couldn't remove the D-Bus configuration file \"%1\" for this service.").arg(dbusFilePath);
+        ok = false;
     }
     if (initdFilePath.isEmpty() || (initdFile.exists() && !initdFile.remove()))  {
-        lastError = QT_DAEMON_TRANSLATE("Couldn't remove the init.d script %1 for this service.").arg(initdFilePath);
-        return false;
+        lastError = QT_DAEMON_TRANSLATE("Couldn't remove the init.d script \"%1\" for this service.").arg(initdFilePath);
+        ok = false;
     }
 
-    state.clear();
-    return true;
+    return ok;
 }
 
 QtDaemon::DaemonStatus QDaemonControllerPrivate::status()
 {
     QDaemonDBusInterface dbus(state.service());
     if (!dbus.open())
-        return RunningStatus;
+        return NotRunningStatus;
 
     QDBusReply<bool> reply = dbus.call<bool>(QStringLiteral("isRunning"));
     return reply.isValid() && reply.value() ? RunningStatus : NotRunningStatus;

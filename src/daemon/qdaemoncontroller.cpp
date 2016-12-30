@@ -119,7 +119,12 @@ bool QDaemonController::install(const QString & path, const QStringList & argume
         return false;
     }
 
-    return d->install();
+    if (!d->install())  {
+        d->state.clear();
+        return false;
+    }
+
+    return true;
 }
 
 /*!
@@ -128,11 +133,14 @@ bool QDaemonController::install(const QString & path, const QStringList & argume
 bool QDaemonController::uninstall()
 {
     Q_D(QDaemonController);
-    if (!d->state.isLoaded() || !d->uninstall())
+    if (!d->state.isLoaded())  {
+        d->lastError = QT_DAEMON_TRANSLATE("The daemon is not installed.");
         return false;
+    }
 
+    bool ok = d->uninstall();
     d->state.clear();
-    return true;
+    return ok;
 }
 
 /*!

@@ -126,6 +126,8 @@ bool QDaemonState::load()
         return false;
 
     QSettings settings(QSettings::SystemScope, organizationName, d.name);
+    settings.setFallbacksEnabled(false);
+
     if (settings.allKeys().size() <= 0)
         return false;
 
@@ -156,6 +158,7 @@ bool QDaemonState::save() const
         return false;
 
     QSettings settings(QSettings::SystemScope, QCoreApplication::organizationName(), d.name);
+    settings.setFallbacksEnabled(false);
 
     // Serialize the settings
     settings.setValue(QStringLiteral("Path"), d.path);
@@ -184,6 +187,7 @@ void QDaemonState::clear()
         return;
 
     QSettings settings(QSettings::SystemScope, organizationName, d.name);
+    settings.setFallbacksEnabled(false);
     settings.clear();
 }
 
