@@ -104,7 +104,7 @@ QT_DAEMON_BEGIN_NAMESPACE
 QDaemonApplication::QDaemonApplication(int & argc, char ** argv)
     : QCoreApplication(argc, argv), d_ptr(new QDaemonApplicationPrivate(this))
 {
-    qRegisterMetaType<DaemonStatus>();
+    qRegisterMetaType<DaemonStatus>("DaemonStatus");
 
     QMetaObject::invokeMethod(this, "_q_daemon_exec", Qt::QueuedConnection);
 }
@@ -150,9 +150,8 @@ QDaemonApplicationPrivate::~QDaemonApplicationPrivate()
 void QDaemonApplicationPrivate::_q_daemon_exec()
 {
     Q_Q(QDaemonApplication);
-
-    QStringList arguments = QDaemonApplication::arguments();
-    if (arguments.empty())  {
+    QStringList arguments = QCoreApplication::arguments();
+    if (arguments.size() <= 1)  {
         QDaemon * daemon = new QDaemon(QCoreApplication::applicationName(), q);
         if (daemon->isValid())  {
             // Connect the signal handlers
@@ -167,8 +166,7 @@ void QDaemonApplicationPrivate::_q_daemon_exec()
             return;
         }
 
-        q->quit();
-        return;
+        arguments << QStringLiteral("--help");  // The daemon is not installed, just show the help
     }
 
     QCommandLineParser parser;
@@ -186,19 +184,19 @@ void QDaemonApplicationPrivate::_q_daemon_exec()
     parser.addOption(start);
     parser.addOption(stop);
     parser.addOption(status);
-    parser.addHelpOption();
+    const QCommandLineOption help = parser.addHelpOption();
 
 #if defined(Q_OS_WIN)
-    const QCommandLineOption updatePath(QStringLiteral("update-path"), QCoreApplication::translate("main", "Update the system PATH on install/uninstall."));
+    const QCommandLineOption updatePath(QT_DAEMON_TRANSLATE("update-path"), QT_DAEMON_TRANSLATE("Update the system PATH on install/uninstall."));
     parser.addOption(updatePath);
 #elif defined(Q_OS_LINUX)
-    const QCommandLineOption initdPrefix(QStringLiteral("initd-prefix"), QCoreApplication::translate("main", "Sets the path for the installed init.d script"), QCoreApplication::translate("main", "path"), QStringLiteral("/etc/init.d"));
-    const QCommandLineOption dbusPrefix(QStringLiteral("dbus-prefix"), QCoreApplication::translate("main", "Sets the path for the installed dbus configuration file"), QCoreApplication::translate("main", "path"), QStringLiteral("/etc/dbus-1/system.d"));
+    const QCommandLineOption initdPrefix(QT_DAEMON_TRANSLATE("initd-prefix"), QT_DAEMON_TRANSLATE("Sets the path for the installed init.d script"), QT_DAEMON_TRANSLATE("path"), QStringLiteral("/etc/init.d"));
+    const QCommandLineOption dbusPrefix(QT_DAEMON_TRANSLATE("dbus-prefix"), QT_DAEMON_TRANSLATE("Sets the path for the installed dbus configuration file"), QT_DAEMON_TRANSLATE("path"), QStringLiteral("/etc/dbus-1/system.d"));
     parser.addOption(initdPrefix);
     parser.addOption(dbusPrefix);
 #elif defined(Q_OS_OSX)
-    const QCommandLineOption agent(QStringLiteral("agent"), QCoreApplication::translate("main", "Sets the daemon as an agent"));
-    const QCommandLineOption userAgent(QStringLiteral("user"), QCoreApplication::translate("main", "Sets the agent as user local (affects only the agent option)"));
+    const QCommandLineOption agent(QT_DAEMON_TRANSLATE("agent"), QT_DAEMON_TRANSLATE("Sets the daemon as an agent"));
+    const QCommandLineOption userAgent(QT_DAEMON_TRANSLATE("user"), QT_DAEMON_TRANSLATE("Sets the agent as user local (affects only the agent option)"));
     parser.addOption(agent);
     parser.addOption(userAgent);
 #endif
@@ -220,29 +218,35 @@ void QDaemonApplicationPrivate::_q_daemon_exec()
 
     // Initialize the controller
     QDaemonController controller(QCoreApplication::applicationName());
-    controller.setFlags(flags);
+    controller.setFlags(controller.flags() | flags);
 #if defined(Q_OS_LINUX)
-    controller.setInitScriptPrefix(parser.value(initdPrefix));
-    controller.setDBusConfigurationPrefix(parser.value(dbusPrefix));
+    if (parser.isSet(initdPrefix))
+        controller.setInitScriptPrefix(parser.value(initdPrefix));
+    if (parser.isSet(dbusPrefix))
+        controller.setDBusConfigurationPrefix(parser.value(dbusPrefix));
 #endif
     controller.setDescription(description);
 
     // Proceed with parsing the main CL option
-    if (parser.isSet(install) && controller.install(QCoreApplication::applicationFilePath(), parser.positionalArguments()))
-        QMetaObject::invokeMethod(q, "installed", Qt::QueuedConnection);
-    else if (parser.isSet(uninstall) && controller.uninstall())
-        QMetaObject::invokeMethod(q, "uninstalled", Qt::QueuedConnection);
+    if (parser.isSet(install))  {
+        if (controller.install(QCoreApplication::applicationFilePath(), parser.positionalArguments()))
+            QMetaObject::invokeMethod(q, "installed", Qt::QueuedConnection);
+    }
+    else if (parser.isSet(uninstall))  {
+        if (controller.uninstall())
+            QMetaObject::invokeMethod(q, "uninstalled", Qt::QueuedConnection);
+    }
     else if (parser.isSet(start))  {
         QStringList arguments = parser.positionalArguments();
-        if (arguments.isEmpty() ? controller.start() : controller.start(arguments))
+        if ((arguments.isEmpty() && controller.start()) || controller.start(arguments))
             QMetaObject::invokeMethod(q, "started", Qt::QueuedConnection);
     }
-    else if (parser.isSet(stop) && controller.stop())
-        QMetaObject::invokeMethod(q, "stopped", Qt::QueuedConnection);
-    else if (parser.isSet(status))  {
-        QtDaemon::DaemonStatus daemonStatus = controller.status();
-        QMetaObject::invokeMethod(q, "status", Qt::QueuedConnection, Q_ARG(QtDaemon::DaemonStatus, daemonStatus));
+    else if (parser.isSet(stop))  {
+        if (controller.stop())
+            QMetaObject::invokeMethod(q, "stopped", Qt::QueuedConnection);
     }
+    else if (parser.isSet(status))
+        QMetaObject::invokeMethod(q, "status", Qt::QueuedConnection, Q_ARG(DaemonStatus, controller.status()));
     else  {
         QTextStream out(stdout);
         out << parser.helpText();
@@ -252,7 +256,7 @@ void QDaemonApplicationPrivate::_q_daemon_exec()
     if (!errorText.isEmpty())
         QMetaObject::invokeMethod(q, "error", Qt::QueuedConnection, Q_ARG(const QString &, errorText));
 
-    q->quit();
+    QMetaObject::invokeMethod(q, "quit", Qt::QueuedConnection);
 }
 
 void QDaemonApplicationPrivate::processSignalHandler(int signalNumber)

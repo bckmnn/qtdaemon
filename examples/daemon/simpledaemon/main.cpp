@@ -2,7 +2,7 @@
 **
 ** Copyright (C) 2016 Konstantin Shegunov <kshegunov@gmail.com>
 **
-** This file is part of the documentation of the QtDaemon library.
+** This file is part of the QtDaemon library.
 **
 ** The MIT License (MIT)
 **
@@ -46,6 +46,7 @@ int main(int argc, char ** argv)
     QObject::connect(&app, &QDaemonApplication::stopped, &controller, &SimpleDaemon::onStopped);
     QObject::connect(&app, &QDaemonApplication::installed, &controller, &SimpleDaemon::onInstalled);
     QObject::connect(&app, &QDaemonApplication::uninstalled, &controller, &SimpleDaemon::onUninstalled);
+    QObject::connect(&app, &QDaemonApplication::status, &controller, &SimpleDaemon::onStatus);
     QObject::connect(&app, &QDaemonApplication::error, &controller, &SimpleDaemon::onError);
 
     return QDaemonApplication::exec();

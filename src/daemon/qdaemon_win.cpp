@@ -42,7 +42,7 @@ void QDaemonPrivate::_q_start()
 
     // Just emit the ready signal, nothing more to do here
     QStringList arguments;
-    arguments << state.executable() << state.arguments();
+    arguments << state.path() << state.arguments();
 
     QMetaObject::invokeMethod(q_func(), "ready", Qt::QueuedConnection, Q_ARG(const QStringList &, arguments));
 }

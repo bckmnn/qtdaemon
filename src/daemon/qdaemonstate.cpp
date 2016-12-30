@@ -121,11 +121,7 @@ void QDaemonState::generatePListPath()
 
 bool QDaemonState::load()
 {
-    QString organizationName = QCoreApplication::organizationName();
-    if (organizationName.isEmpty())
-        return false;
-
-    QSettings settings(QSettings::SystemScope, organizationName, d.name);
+    QSettings settings(QSettings::SystemScope, QCoreApplication::organizationName(), d.name);
     settings.setFallbacksEnabled(false);
 
     if (settings.allKeys().size() <= 0)
@@ -182,11 +178,7 @@ bool QDaemonState::save() const
 
 void QDaemonState::clear()
 {
-    QString organizationName = QCoreApplication::organizationName();
-    if (organizationName.isEmpty())
-        return;
-
-    QSettings settings(QSettings::SystemScope, organizationName, d.name);
+    QSettings settings(QSettings::SystemScope, QCoreApplication::organizationName(), d.name);
     settings.setFallbacksEnabled(false);
     settings.clear();
 }

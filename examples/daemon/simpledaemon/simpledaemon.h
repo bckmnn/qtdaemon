@@ -2,7 +2,7 @@
 **
 ** Copyright (C) 2016 Konstantin Shegunov <kshegunov@gmail.com>
 **
-** This file is part of the documentation of the QtDaemon library.
+** This file is part of the QtDaemon library.
 **
 ** The MIT License (MIT)
 **
@@ -29,6 +29,7 @@
 #ifndef SIMPLEDAEMON_H
 #define SIMPLEDAEMON_H
 
+#include <QDaemonApplication>
 #include <QObject>
 #include <QFile>
 #include <QTextStream>
@@ -47,6 +48,7 @@ public slots:
     void onStopped();
     void onInstalled();
     void onUninstalled();
+    void onStatus(QtDaemon::DaemonStatus);
     void onError(const QString &);
 
 private:

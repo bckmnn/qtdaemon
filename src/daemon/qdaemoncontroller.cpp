@@ -41,8 +41,7 @@ QDaemonController::QDaemonController(const QString & name, QObject * parent)
 {
     Q_ASSERT_X(qApp, Q_FUNC_INFO, "You must create the application object first.");
 
-    if (!d_ptr->state.load())
-        d_ptr->lastError = QT_DAEMON_TRANSLATE("Couldn't load the daemon configuration.");
+    d_ptr->state.load();
 }
 
 /*!
@@ -51,8 +50,10 @@ QDaemonController::QDaemonController(const QString & name, QObject * parent)
 bool QDaemonController::start()
 {
     Q_D(QDaemonController);
-    if (!d->state.isLoaded())
+    if (!d->state.isLoaded())  {
+        d_ptr->lastError = QT_DAEMON_TRANSLATE("The daemon is not installed.");
         return false;
+    }
 
     return d->start();
 }
@@ -63,8 +64,10 @@ bool QDaemonController::start()
 bool QDaemonController::start(const QStringList & arguments)
 {
     Q_D(QDaemonController);
-    if (!d->state.isLoaded())
+    if (!d->state.isLoaded())  {
+        d_ptr->lastError = QT_DAEMON_TRANSLATE("The daemon is not installed.");
         return false;
+    }
 
     QStringList oldArguments = d->state.arguments();
 
@@ -91,8 +94,10 @@ bool QDaemonController::start(const QStringList & arguments)
 bool QDaemonController::stop()
 {
     Q_D(QDaemonController);
-    if (!d->state.isLoaded())
+    if (!d->state.isLoaded())  {
+        d_ptr->lastError = QT_DAEMON_TRANSLATE("The daemon is not installed.");
         return false;
+    }
 
     return d->stop();
 }

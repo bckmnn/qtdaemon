@@ -2,7 +2,7 @@
 **
 ** Copyright (C) 2016 Konstantin Shegunov <kshegunov@gmail.com>
 **
-** This file is part of the documentation of the QtDaemon library.
+** This file is part of the QtDaemon library.
 **
 ** The MIT License (MIT)
 **
@@ -60,6 +60,11 @@ void SimpleDaemon::onInstalled()
 void SimpleDaemon::onUninstalled()
 {
     out << QStringLiteral("The daemon was uninstalled.") << endl;
+}
+
+void SimpleDaemon::onStatus(QtDaemon::DaemonStatus status)
+{
+    out << QStringLiteral("The daemon is %1").arg(status == QtDaemon::RunningStatus ? QStringLiteral("running") : QStringLiteral("not running")) << endl;
 }
 
 void SimpleDaemon::onError(const QString & error)
