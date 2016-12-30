@@ -2,7 +2,7 @@
 **
 ** Copyright (C) 2016 Konstantin Shegunov <kshegunov@gmail.com>
 **
-** This file is part of the documentation of the QtDaemon library.
+** This file is part of the QtDaemon library.
 **
 ** The MIT License (MIT)
 **
@@ -26,32 +26,26 @@
 **
 ****************************************************************************/
 
-#include <QCoreApplication>
-#include <QDateTime>
-#include <QFile>
-#include <QTextStream>
+#include "customdaemon.h"
 
+#include <QCoreApplication>
 #include <QDaemon>
 
 using namespace QtDaemon;
 
 int main(int argc, char ** argv)
 {
-    QCoreApplication::setOrganizationDomain("void.company.domain");
-    QCoreApplication::setOrganizationName("Void Company Name Inc.");
+    QCoreApplication::setOrganizationDomain("qtdaemon.examples");
+    QCoreApplication::setOrganizationName("QtDaemon examples");
 
     QCoreApplication app(argc, argv);
 
     QDaemon daemon("QtDaemon Custom Control example");
-    QObject::connect(&daemon, &QDaemon::ready, [&daemon] (const QStringList & arguments) -> void {
-        QFile outFile(QStringLiteral("%1.log").arg(daemon.filePath()));
-        if (!outFile.open(QFile::WriteOnly | QFile::Append | QFile::Text))
-            return;
 
-        QTextStream out(&outFile);
+    CustomDaemon controller;
 
-        out << QStringLiteral("[%1] The custom daemon is running! Arguments: %2").arg(QDateTime::currentDateTime().toString(Qt::ISODate)).arg(arguments.join(' ')) << endl;
-    });
+    QObject::connect(&daemon, &QDaemon::ready, &controller, &CustomDaemon::onReady);
+    QObject::connect(&daemon, &QDaemon::error, &controller, &CustomDaemon::onError);
 
     return QCoreApplication::exec();
 }

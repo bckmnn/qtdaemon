@@ -2,7 +2,7 @@
 **
 ** Copyright (C) 2016 Konstantin Shegunov <kshegunov@gmail.com>
 **
-** This file is part of the documentation of the QtDaemon library.
+** This file is part of the QtDaemon library.
 **
 ** The MIT License (MIT)
 **
@@ -37,8 +37,8 @@ using namespace QtDaemon;
 
 int main(int argc, char ** argv)
 {
-    QCoreApplication::setOrganizationDomain("void.company.domain");
-    QCoreApplication::setOrganizationName("Void Company Name Inc.");
+    QCoreApplication::setOrganizationDomain("qtdaemon.examples");
+    QCoreApplication::setOrganizationName("QtDaemon examples");
 
     QCoreApplication app(argc, argv);
 
@@ -60,8 +60,6 @@ int main(int argc, char ** argv)
 
     QDaemonController controller("QtDaemon Custom Control example");
     controller.setFlags(QtDaemon::UpdatePathFlag | QtDaemon::AgentFlag | QtDaemon::UserAgentFlag);
-    controller.setInitScriptPrefix(QStringLiteral("/home/nye/Temp/daemon/initd"));
-    controller.setDBusConfigurationPrefix(QStringLiteral("/home/nye/Temp/daemon/dbus"));
     controller.setDescription(QStringLiteral("The example demonstrates creating a fully customizable daemon and its corresponding controller application."));
 
     QTextStream out(stdout);
@@ -96,7 +94,7 @@ int main(int argc, char ** argv)
     }
 
     if (!ok)  {
-        out << QStringLiteral("Operation failed!");
+        out << QStringLiteral("Operation failed! Error: %1").arg(controller.lastError());
         return 1;
     }
 

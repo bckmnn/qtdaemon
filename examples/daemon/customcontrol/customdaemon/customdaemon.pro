@@ -4,4 +4,8 @@
 
 TARGET = customdaemon
 
-SOURCES += main.cpp
+SOURCES += main.cpp \
+    customdaemon.cpp
+
+HEADERS += \
+    customdaemon.h
