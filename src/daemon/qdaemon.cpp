@@ -30,6 +30,7 @@
 #include "QtDaemon/private/qdaemon_p.h"
 
 #include <QtCore/qcoreapplication.h>
+#include <QtCore/qdir.h>
 
 QT_DAEMON_BEGIN_NAMESPACE
 
@@ -44,6 +45,12 @@ QDaemon::QDaemon(const QString & name, QObject * parent)
         QObject::connect(this, &QDaemon::error, qApp, &QCoreApplication::quit, Qt::QueuedConnection);
 
         return;
+    }
+
+    // Try to correct the current working directory for some badly behaved systems (like Windows, which sets it to point to system root).
+    if (!QDir::setCurrent(d_ptr->state.directory()))  {
+        QString errorText = QT_DAEMON_TRANSLATE("Couldn't set the daemon's working directory correctly.");
+        QMetaObject::invokeMethod(this, "error", Qt::QueuedConnection, Q_ARG(const QString &, errorText));
     }
 
     QObject::connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(_q_stop()));

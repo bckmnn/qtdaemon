@@ -33,41 +33,62 @@
 SimpleDaemon::SimpleDaemon(QObject * parent)
     : QObject(parent), logFile("simpledaemon.log"), out(stdout)
 {
-    if (logFile.open(QFile::WriteOnly | QFile::Append | QFile::Text))
-        out.setDevice(&logFile);
+    // Don't open the file in the constructor, the current working directory may point to nowhere on some platforms
+    // Wait for the signals to be emitted, then it's set properly.
 }
 
 void SimpleDaemon::onDaemonReady(const QStringList & arguments)
 {
+    if (logFile.open(QFile::WriteOnly | QFile::Append | QFile::Text))
+        out.setDevice(&logFile);
+
     out << QStringLiteral("The daemon is ready. Arguments: %1").arg(arguments.join(' ')) << endl;
 }
 
 void SimpleDaemon::onStarted()
 {
+    if (logFile.open(QFile::WriteOnly | QFile::Append | QFile::Text))
+        out.setDevice(&logFile);
+
     out << QStringLiteral("The daemon was started.") << endl;
 }
 
 void SimpleDaemon::onStopped()
 {
+    if (logFile.open(QFile::WriteOnly | QFile::Append | QFile::Text))
+        out.setDevice(&logFile);
+
     out << QStringLiteral("The daemon was stopped.") << endl;
 }
 
 void SimpleDaemon::onInstalled()
 {
+    if (logFile.open(QFile::WriteOnly | QFile::Append | QFile::Text))
+        out.setDevice(&logFile);
+
     out << QStringLiteral("The daemon was installed.") << endl;
 }
 
 void SimpleDaemon::onUninstalled()
 {
+    if (logFile.open(QFile::WriteOnly | QFile::Append | QFile::Text))
+        out.setDevice(&logFile);
+
     out << QStringLiteral("The daemon was uninstalled.") << endl;
 }
 
 void SimpleDaemon::onStatus(QtDaemon::DaemonStatus status)
 {
+    if (logFile.open(QFile::WriteOnly | QFile::Append | QFile::Text))
+        out.setDevice(&logFile);
+
     out << QStringLiteral("The daemon is %1").arg(status == QtDaemon::RunningStatus ? QStringLiteral("running") : QStringLiteral("not running")) << endl;
 }
 
 void SimpleDaemon::onError(const QString & error)
 {
+    if (logFile.open(QFile::WriteOnly | QFile::Append | QFile::Text))
+        out.setDevice(&logFile);
+
     out << QStringLiteral("An error occured: %1").arg(error) << endl;
 }

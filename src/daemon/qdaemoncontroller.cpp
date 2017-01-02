@@ -30,18 +30,24 @@
 #include "QtDaemon/private/qdaemoncontroller_p.h"
 
 #include <QtCore/qcoreapplication.h>
+#include <QtCore/qdir.h>
 
 QT_DAEMON_BEGIN_NAMESPACE
 
 /*!
-    Starts the daemon
+    Initializes the daemon controller.
+
+    \warning The constructor will try to change the current working directory to the daemon's location if it's known, or to the controller application's path if not.
 */
 QDaemonController::QDaemonController(const QString & name, QObject * parent)
     : QObject(parent), d_ptr(new QDaemonControllerPrivate(name, this))
 {
     Q_ASSERT_X(qApp, Q_FUNC_INFO, "You must create the application object first.");
 
-    d_ptr->state.load();
+    if (d_ptr->state.load())
+        QDir::setCurrent(d_ptr->state.directory());
+    else
+        QDir::setCurrent(QCoreApplication::applicationDirPath());
 }
 
 /*!

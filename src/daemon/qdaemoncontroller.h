@@ -78,8 +78,6 @@ private:
     QDaemonControllerPrivate * d_ptr;
 };
 
-
-
 QT_DAEMON_END_NAMESPACE
 
 #endif // QDAEMONCONTROLLER_H

@@ -121,6 +121,13 @@ void QDaemonState::generatePListPath()
 
 bool QDaemonState::load()
 {
+#if defined(Q_OS_WIN)
+    if (QCoreApplication::organizationName().isEmpty())  {
+        qWarning("You should provide an organization name! QCoreApplication::organizationName() must not return an empty string.");
+        return false;
+    }
+#endif
+
     QSettings settings(QSettings::SystemScope, QCoreApplication::organizationName(), d.name);
     settings.setFallbacksEnabled(false);
 
@@ -150,6 +157,13 @@ bool QDaemonState::load()
 
 bool QDaemonState::save() const
 {
+#if defined(Q_OS_WIN)
+    if (QCoreApplication::organizationName().isEmpty())  {
+        qWarning("You should provide an organization name! QCoreApplication::organizationName() must not return an empty string.");
+        return false;
+    }
+#endif
+
     if (d.path.isEmpty() || d.executable.isEmpty() || d.directory.isEmpty() || d.service.isEmpty())
         return false;
 

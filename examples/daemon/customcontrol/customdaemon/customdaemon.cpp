@@ -33,16 +33,22 @@
 CustomDaemon::CustomDaemon(QObject * parent)
     : QObject(parent), logFile("customdaemon.log"), out(stdout)
 {
-    if (logFile.open(QFile::WriteOnly | QFile::Append | QFile::Text))
-        out.setDevice(&logFile);
+    // Don't open the file in the constructor, the current working directory may point to nowhere on some platforms
+    // Wait for the signals to be emitted, then it's set properly.
 }
 
 void CustomDaemon::onReady(const QStringList & arguments)
 {
+    if (logFile.open(QFile::WriteOnly | QFile::Append | QFile::Text))
+        out.setDevice(&logFile);
+
     out << QStringLiteral("The daemon is ready. Arguments: %1").arg(arguments.join(' ')) << endl;
 }
 
 void CustomDaemon::onError(const QString & error)
 {
+    if (logFile.open(QFile::WriteOnly | QFile::Append | QFile::Text))
+        out.setDevice(&logFile);
+
     out << QStringLiteral("An error occured: %1").arg(error) << endl;
 }

@@ -38,6 +38,7 @@ int main(int argc, char ** argv)
 
     QDaemonApplication::setApplicationName("SimpleDaemon example");
     QDaemonApplication::setApplicationDescription("The Simple Daemon example shows the basic requirements for creating a daemon");
+    QDaemonApplication::setOrganizationName("QtDaemon examples");
     QDaemonApplication::setOrganizationDomain("qtdaemon.examples");
 
     SimpleDaemon controller;
