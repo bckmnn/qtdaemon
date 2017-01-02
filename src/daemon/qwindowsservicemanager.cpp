@@ -28,27 +28,55 @@
 
 #include "QtDaemon/private/qwindowsservicemanager_p.h"
 
+#include <QtCore/qcoreapplication.h>
 #include <QtCore/qelapsedtimer.h>
 #include <QtCore/qdir.h>
 
 QT_DAEMON_BEGIN_NAMESPACE
 
+static SC_HANDLE serviceManagerHandle = NULL;
+static qint32 serviceManagerHandleReferenceCount = 0;
+
+QWindowsServiceManager::QWindowsServiceManager(SC_HANDLE manager)
+    : handle(manager)
+{
+    if (handle)
+        serviceManagerHandleReferenceCount++;
+}
+
+QWindowsServiceManager::QWindowsServiceManager(const QWindowsServiceManager & other)
+{
+    handle = other.handle;
+    error = other.error;
+
+    if (handle)
+        serviceManagerHandleReferenceCount++;
+}
+
 QWindowsServiceManager QWindowsServiceManager::open()
 {
-    // Open a handle to the service manager
-    SC_HANDLE manager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
-    if (!manager)
-        qDaemonLog(QStringLiteral("Couldn't open a handle to the service manager (Error code %1)").arg(GetLastError()), QDaemonLog::ErrorEntry);
+    // Try to open the service manager (if not already)
+    if (!serviceManagerHandle)
+        serviceManagerHandle = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
 
-    return QWindowsServiceManager(manager);
+    // Set up the object
+    QWindowsServiceManager manager(serviceManagerHandle);
+    if (!serviceManagerHandle)
+        manager.error = QT_DAEMON_TRANSLATE("Couldn't open a handle to the service manager (Error code %1)").arg(GetLastError());
+
+    return manager;
 }
 
 void QWindowsServiceManager::close()
 {
-    if (handle && !CloseServiceHandle(handle))
-        qDaemonLog(QStringLiteral("Error while closing the service manager (Error code %1).").arg(GetLastError()), QDaemonLog::WarningEntry);
+    serviceManagerHandleReferenceCount--;
+    if (serviceManagerHandleReferenceCount > 0)
+        return;
 
-    handle = Q_NULLPTR;
+    if (handle && !CloseServiceHandle(handle))
+        error = QT_DAEMON_TRANSLATE("Error while closing the service manager (Error code %1).").arg(GetLastError());
+
+    serviceManagerHandle = handle = NULL;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -61,20 +89,8 @@ bool QWindowsService::open(int access)
 
     // Open the service
     handle = OpenService(manager.handle, lpName, access);
-    if (!handle)  {
-        DWORD error = GetLastError();
-        switch (error)
-        {
-        case ERROR_ACCESS_DENIED:
-            qDaemonLog(QStringLiteral("Couldn't open service control, access denied."), QDaemonLog::ErrorEntry);
-            break;
-        case ERROR_SERVICE_DOES_NOT_EXIST:
-            qDaemonLog(QStringLiteral("The service is not installed."), QDaemonLog::ErrorEntry);
-            break;
-        default:
-            qDaemonLog(QStringLiteral("Couldn't open the service (Error code %1).").arg(error), QDaemonLog::ErrorEntry);
-        }
-    }
+    if (!handle)
+        setError(GetLastError());
 
     return handle;
 }
@@ -82,9 +98,9 @@ bool QWindowsService::open(int access)
 void QWindowsService::close()
 {
     if (handle && !CloseServiceHandle(handle))
-        qDaemonLog(QStringLiteral("Error while closing the service handle (Error code %1).").arg(GetLastError()), QDaemonLog::WarningEntry);
+        error = QT_DAEMON_TRANSLATE("Error while closing the service handle (Error code %1).").arg(GetLastError());
 
-    handle = Q_NULLPTR;
+    handle = NULL;
 }
 
 bool QWindowsService::create()
@@ -95,20 +111,7 @@ bool QWindowsService::create()
     // Create the service
     handle = CreateService(manager.handle, lpName, lpName, SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START, SERVICE_ERROR_NORMAL, lpPath, NULL, NULL, NULL, NULL, NULL);
     if (!handle)  {
-        DWORD error =  GetLastError();
-        switch (error)
-        {
-        case ERROR_ACCESS_DENIED:
-            qDaemonLog(QStringLiteral("Couldn't install the service, access denied."), QDaemonLog::ErrorEntry);
-            break;
-        case ERROR_DUPLICATE_SERVICE_NAME:
-        case ERROR_SERVICE_EXISTS:
-            qDaemonLog(QStringLiteral("The service was already installed (Uninstall first)."), QDaemonLog::ErrorEntry);
-            break;
-        default:
-            qDaemonLog(QStringLiteral("Couldn't install the service (Error code %1).").arg(error), QDaemonLog::ErrorEntry);
-        }
-
+        setError(GetLastError());
         return false;
     }
 
@@ -119,7 +122,7 @@ bool QWindowsService::create()
         SERVICE_DESCRIPTION serviceDescription;
         serviceDescription.lpDescription = lpDescription;
         if (!ChangeServiceConfig2(handle, SERVICE_CONFIG_DESCRIPTION, &serviceDescription))
-            qDaemonLog(QStringLiteral("Couldn't set the service description (Error code %1).").arg(GetLastError()), QDaemonLog::WarningEntry);
+            setError(GetLastError());
     }
 
     return true;
@@ -133,19 +136,8 @@ bool QWindowsService::remove()
     }
 
     // Delete the service
-    if (!DeleteService(handle))  {
-        DWORD error = GetLastError();
-        switch (error)
-        {
-        case ERROR_SERVICE_MARKED_FOR_DELETE:
-            qDaemonLog(QStringLiteral("The service had already been marked for deletion."), QDaemonLog::ErrorEntry);
-            break;
-        default:
-            qDaemonLog(QStringLiteral("Couldn't delete the service (Error code %1).").arg(error), QDaemonLog::ErrorEntry);
-        }
-
-        return false;
-    }
+    if (!DeleteService(handle))
+        setError(GetLastError());
 
     return true;
 }
@@ -159,25 +151,7 @@ bool QWindowsService::start()
 
     // Start the service
     if (!StartService(handle, 0, NULL))  {
-        DWORD error = GetLastError();
-        switch (error)
-        {
-        case ERROR_ACCESS_DENIED:
-            qDaemonLog(QStringLiteral("Couldn't stop the service: Access denied."), QDaemonLog::ErrorEntry);
-            break;
-        case ERROR_PATH_NOT_FOUND:
-            qDaemonLog(QStringLiteral("Couldn't start the service: The path to the executable is set incorrectly."), QDaemonLog::ErrorEntry);
-            break;
-        case ERROR_SERVICE_ALREADY_RUNNING:
-            qDaemonLog(QStringLiteral("The service is already running."), QDaemonLog::ErrorEntry);
-            break;
-        case ERROR_SERVICE_REQUEST_TIMEOUT:
-            qDaemonLog(QStringLiteral("The service is not responding."), QDaemonLog::ErrorEntry);
-            break;
-        default:
-            qDaemonLog(QStringLiteral("Couldn't start the service (Error code %1).").arg(error), QDaemonLog::ErrorEntry);
-        }
-
+        setError(GetLastError());
         return false;
     }
 
@@ -194,22 +168,7 @@ bool QWindowsService::stop()
     // Stop the service
     SERVICE_STATUS serviceStatus;
     if (!ControlService(handle, SERVICE_CONTROL_STOP, &serviceStatus))  {
-        DWORD error = GetLastError();
-        switch (error)
-        {
-        case ERROR_ACCESS_DENIED:
-            qDaemonLog(QStringLiteral("Couldn't stop the service, access denied."), QDaemonLog::ErrorEntry);
-            break;
-        case ERROR_SERVICE_NOT_ACTIVE:
-            qDaemonLog(QStringLiteral("The service is not running."), QDaemonLog::ErrorEntry);
-            break;
-        case ERROR_SERVICE_REQUEST_TIMEOUT:
-            qDaemonLog(QStringLiteral("The service is not responding."), QDaemonLog::ErrorEntry);
-            break;
-        default:
-            qDaemonLog(QStringLiteral("Couldn't stop the service (Error code %1).").arg(error), QDaemonLog::ErrorEntry);
-        }
-
+        setError(GetLastError());
         return false;
     }
 
@@ -226,16 +185,7 @@ DWORD QWindowsService::status()
     DWORD bytesNeeded;
     SERVICE_STATUS_PROCESS serviceStatus;
     if (!QueryServiceStatusEx(handle, SC_STATUS_PROCESS_INFO, reinterpret_cast<LPBYTE>(&serviceStatus), sizeof(SERVICE_STATUS_PROCESS), &bytesNeeded))  {
-        DWORD error = GetLastError();
-        switch (error)
-        {
-        case ERROR_ACCESS_DENIED:
-            qDaemonLog(QStringLiteral("Couldn't get the service's status, access denied."), QDaemonLog::ErrorEntry);
-            break;
-        default:
-            qDaemonLog(QStringLiteral("Couldn't get the service's status (Error code %1).").arg(error), QDaemonLog::ErrorEntry);
-        }
-
+        setError(GetLastError());
         return 0;
     }
 
@@ -257,8 +207,86 @@ bool QWindowsService::waitForStatus(DWORD requestedStatus)
         QThread::msleep(pollInterval);
     }
 
-    qDaemonLog(QStringLiteral("The service is not responding."), QDaemonLog::ErrorEntry);
+    setError(QT_DAEMON_TRANSLATE("The service is not responding."));
     return false;
+}
+
+void QWindowsService::setError(DWORD code)
+{
+    switch (code)
+    {
+    case ERROR_ACCESS_DENIED:
+        error = QT_DAEMON_TRANSLATE("Couldn't access service control, access denied.");
+        break;
+    case ERROR_INVALID_SERVICE_CONTROL:
+        error = QT_DAEMON_TRANSLATE("The requested control is not valid for this service.");
+        break;
+    case ERROR_SERVICE_REQUEST_TIMEOUT:
+        error = QT_DAEMON_TRANSLATE("The service did not respond to the start or control request in a timely fashion.");
+        break;
+    case ERROR_SERVICE_NO_THREAD:
+        error = QT_DAEMON_TRANSLATE("A thread could not be created for the service.");
+        break;
+    case ERROR_SERVICE_DATABASE_LOCKED:
+        error = QT_DAEMON_TRANSLATE("The service database is locked.");
+        break;
+    case ERROR_SERVICE_ALREADY_RUNNING:
+        error = QT_DAEMON_TRANSLATE(" An instance of the service is already running.");
+        break;
+    case ERROR_INVALID_SERVICE_ACCOUNT:
+        error = QT_DAEMON_TRANSLATE("The account name is invalid or does not exist, or the password is invalid for the account name specified.");
+        break;
+    case ERROR_SERVICE_DISABLED:
+        error = QT_DAEMON_TRANSLATE("The service cannot be started, either because it is disabled or because it has no enabled devices associated with it.");
+        break;
+    case ERROR_SERVICE_DOES_NOT_EXIST:
+        error = QT_DAEMON_TRANSLATE("The specified service does not exist as an installed service.");
+        break;
+    case ERROR_SERVICE_CANNOT_ACCEPT_CTRL:
+        error = QT_DAEMON_TRANSLATE("The service cannot accept control messages at this time.");
+        break;
+    case ERROR_SERVICE_NOT_ACTIVE:
+        error = QT_DAEMON_TRANSLATE("The service has not been started.");
+        break;
+    case ERROR_FAILED_SERVICE_CONTROLLER_CONNECT:
+        error = QT_DAEMON_TRANSLATE("The service process could not connect to the service controller.");
+        break;
+    case ERROR_EXCEPTION_IN_SERVICE:
+        error = QT_DAEMON_TRANSLATE("An exception occurred in the service when handling the control request.");
+        break;
+    case ERROR_SERVICE_SPECIFIC_ERROR:
+        error = QT_DAEMON_TRANSLATE("The service has returned a service-specific error code.");
+        break;
+    case ERROR_PROCESS_ABORTED:
+        error = QT_DAEMON_TRANSLATE("The process terminated unexpectedly.");
+        break;
+    case ERROR_SERVICE_LOGON_FAILED:
+        error = QT_DAEMON_TRANSLATE("The service did not start due to a logon failure.");
+        break;
+    case ERROR_SERVICE_START_HANG:
+        error = QT_DAEMON_TRANSLATE("After starting, the service hung in a start-pending state.");
+        break;
+    case ERROR_INVALID_SERVICE_LOCK:
+        error = QT_DAEMON_TRANSLATE("The specified service database lock is invalid.");
+        break;
+    case ERROR_SERVICE_MARKED_FOR_DELETE:
+        error = QT_DAEMON_TRANSLATE("The specified service has been marked for deletion.");
+        break;
+    case ERROR_SERVICE_EXISTS:
+        error = QT_DAEMON_TRANSLATE("The specified service already exists.");
+        break;
+    case ERROR_SERVICE_NEVER_STARTED:
+        error = QT_DAEMON_TRANSLATE("No attempts to start the service have been made since the last boot.");
+        break;
+    case ERROR_DUPLICATE_SERVICE_NAME:
+        error = QT_DAEMON_TRANSLATE("The name is already in use as either a service name or a service display name.");
+        break;
+    case ERROR_DIFFERENT_SERVICE_ACCOUNT:
+        error = QT_DAEMON_TRANSLATE("The account specified for this service is different from the account specified for other services running in the same process.");
+        break;
+    default:
+        error = QT_DAEMON_TRANSLATE("A general error occured (refer to MSDN error codes for more information). Error code: %1").arg(code);
+    }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -269,15 +297,15 @@ QWindowsSystemPath::QWindowsSystemPath()
 {
     // Retrieve the system path (RegOpenKeyTransacted breaks compatibility with Windows XP)
     if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, pathRegistryKey, 0, KEY_QUERY_VALUE | KEY_SET_VALUE, &registryKey) != ERROR_SUCCESS)  {
-        qDaemonLog(QStringLiteral("Couldn't open the PATH registry key. You may need to update the system path manually."), QDaemonLog::WarningEntry);
-        registryKey = Q_NULLPTR;
+        error = QT_DAEMON_TRANSLATE("Couldn't open the PATH registry key. You may need to update the system path manually.");
+        registryKey = NULL;
     }
 }
 
 QWindowsSystemPath::~QWindowsSystemPath()
 {
     if (registryKey && RegCloseKey(registryKey) != ERROR_SUCCESS)
-        qDaemonLog(QStringLiteral("Couldn't close the PATH registry key. You may need to update the system path manually."), QDaemonLog::WarningEntry);
+        error = QT_DAEMON_TRANSLATE("Couldn't close the PATH registry key. You may need to update the system path manually.");
 }
 
 bool QWindowsSystemPath::addEntry(const QString & dir)
@@ -315,7 +343,7 @@ bool QWindowsSystemPath::load()
     // Get the size
     DWORD bufferSize;
     if (RegQueryValueEx(registryKey, TEXT("Path"), 0, NULL, NULL, &bufferSize) != ERROR_SUCCESS)  {
-        qDaemonLog(QStringLiteral("Couldn't retrieve the PATH registry key' size."), QDaemonLog::WarningEntry);
+        error = QT_DAEMON_TRANSLATE("Couldn't retrieve the PATH registry key' size.");
         return false;
     }
 
@@ -324,7 +352,7 @@ bool QWindowsSystemPath::load()
 
     // Repeat the query, this time with a buffer to get the actual data
     if (RegQueryValueEx(registryKey, TEXT("Path"), 0, NULL, buffer, &bufferSize) != ERROR_SUCCESS)  {
-        qDaemonLog(QStringLiteral("Couldn't retrieve the PATH registry key. You may need to update the system path manually."), QDaemonLog::WarningEntry);
+        error = QT_DAEMON_TRANSLATE("Couldn't retrieve the PATH registry key. You may need to update the system path manually.");
         delete [] buffer;
         return false;
     }
@@ -355,7 +383,7 @@ bool QWindowsSystemPath::save()
 
     // And again, try to forget there's such thing as type safety
     if (RegSetValueEx(registryKey, TEXT("Path"), 0, REG_SZ, reinterpret_cast<LPCBYTE>(path.utf16()), path.size() * sizeof(TCHAR) + 1) != ERROR_SUCCESS)  {
-        qDaemonLog(QStringLiteral("Couldn't save the PATH registry key. You may need to update the system path manually."), QDaemonLog::WarningEntry);
+        error = QT_DAEMON_TRANSLATE("Couldn't save the PATH registry key. You may need to update the system path manually.");
         return false;
     }
 

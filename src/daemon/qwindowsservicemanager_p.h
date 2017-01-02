@@ -58,21 +58,19 @@ private:
     QWindowsServiceManager(SC_HANDLE manager);
 
 public:
+    QWindowsServiceManager(const QWindowsServiceManager &);
     ~QWindowsServiceManager();
 
     static QWindowsServiceManager open();
     void close();
 
     bool isValid() const;
+    QString lastError() const;
 
 private:
     SC_HANDLE handle;
+    QString error;
 };
-
-inline QWindowsServiceManager::QWindowsServiceManager(SC_HANDLE manager)
-    : handle(manager)
-{
-}
 
 inline QWindowsServiceManager::~QWindowsServiceManager()
 {
@@ -112,8 +110,12 @@ public:
     bool stop();
     DWORD status();
 
+    QString lastError() const;
+
 private:
     bool waitForStatus(DWORD requestedStatus);
+    void setError(DWORD);
+    void setError(const QString &);
 
 private:
     QWindowsServiceManager & manager;
@@ -121,6 +123,7 @@ private:
     QString serviceName;
     QString serviceDescription;
     QString serviceExecutable;
+    QString error;
 };
 
 inline QWindowsService::QWindowsService(const QString & name, QWindowsServiceManager & sm)
@@ -173,6 +176,16 @@ inline bool QWindowsService::isOpen()
     return handle;
 }
 
+inline QString QWindowsService::lastError() const
+{
+    return error;
+}
+
+inline void QWindowsService::setError(const QString & errorText)
+{
+    error = errorText;
+}
+
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
 class Q_DAEMON_LOCAL QWindowsSystemPath
@@ -192,6 +205,7 @@ private:
     HKEY registryKey;
     QStringList entries;
 
+    QString error;
     static LPCTSTR pathRegistryKey;
 };
 

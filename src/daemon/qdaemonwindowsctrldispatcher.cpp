@@ -51,7 +51,7 @@ void QDaemonWindowsCtrlDispatcher::run()
     if (!StartServiceCtrlDispatcher(dispatchTable))  {
         ok = false;
 
-        qDaemonLog(QStringLiteral("Couldn't run the service control dispatcher (Error code %1).").arg(GetLastError()), QDaemonLog::ErrorEntry);
+        lastError = QT_DAEMON_TRANSLATE("Couldn't run the service control dispatcher (Error code %1).").arg(GetLastError()); // Not worried about thread-safety as the main thread is (still) blocked
         serviceStartLock.release();		// Free the main thread
     }
 }
@@ -88,7 +88,7 @@ VOID WINAPI ServiceMain(DWORD, LPTSTR *)
     // Just register the handler and that's all
     ctrl->serviceStatusHandle = RegisterServiceCtrlHandlerEx(ctrl->dispatchTable[0].lpServiceName, ServiceControlHandler, ctrl);
     if (!ctrl->serviceStatusHandle)  {
-        qDaemonLog(QStringLiteral("Couldn't register the service control handler (Error code %1).").arg(GetLastError()), QDaemonLog::ErrorEntry);
+        ctrl->lastError = QT_DAEMON_TRANSLATE("Couldn't run the service control dispatcher (Error code %1).").arg(GetLastError()); // Not worried about thread-safety as the main thread is (still) blocked
         ctrl->serviceStartLock.release();
         return;
     }

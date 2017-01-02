@@ -75,6 +75,7 @@ private:
     SERVICE_STATUS_HANDLE serviceStatusHandle;
     SERVICE_STATUS serviceStatus;
     bool ok;
+    QString lastError;
 
 private:
     static QDaemonWindowsCtrlDispatcher * instance;
