@@ -78,16 +78,14 @@ bool QDaemonController::start(const QStringList & arguments)
     QStringList oldArguments = d->state.arguments();
 
     d->state.setArguments(arguments);
-    if (!d->state.save())  {
-        d->lastError = QT_DAEMON_TRANSLATE("Couldn't save the daemon configuration.");
+    if (!d->saveState())  {
         return false;
     }
 
     bool ok = d->start();
 
     d->state.setArguments(oldArguments);
-    if (!d->state.save())  {
-        d->lastError = QT_DAEMON_TRANSLATE("Couldn't save the daemon configuration.");
+    if (!d->saveState())  {
         return false;
     }
 
@@ -125,8 +123,7 @@ bool QDaemonController::install(const QString & path, const QStringList & argume
         return false;
     }
 
-    if (!d->state.save())  {
-        d->lastError = QT_DAEMON_TRANSLATE("Couldn't save the daemon configuration.");
+    if (!d->saveState())  {
         return false;
     }
 
@@ -236,6 +233,14 @@ QString QDaemonController::dbusConfigurationPrefix() const
 QDaemonControllerPrivate::QDaemonControllerPrivate(const QString & name, QDaemonController * q)
     : q_ptr(q), state(name)
 {
+}
+
+bool QDaemonControllerPrivate::saveState()
+{
+    bool saved = state.save();
+    if (!saved)
+        lastError = QT_DAEMON_TRANSLATE("Couldn't save the daemon configuration.");
+    return saved;
 }
 
 QT_DAEMON_END_NAMESPACE

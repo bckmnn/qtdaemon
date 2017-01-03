@@ -75,6 +75,7 @@ public:
     bool stop();
     bool install();
     bool uninstall();
+    bool saveState();
 
     QtDaemon::DaemonStatus status();
 
