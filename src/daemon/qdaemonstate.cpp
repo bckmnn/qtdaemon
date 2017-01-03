@@ -40,6 +40,27 @@ static const QString defaultInitDPath = QStringLiteral("/etc/init.d");
 static const QString defaultDBusPath = QStringLiteral("/etc/dbus-1/system.d");
 static const qint32 defaultDBusTimeout = 30;
 
+
+class QDaemonSettings : public QSettings
+{
+public:
+    QDaemonSettings(const QString & application, QObject * parent=nullptr)
+    : QSettings(
+#if defined(Q_OS_OSX)
+        QSettings::UserScope,
+#else
+        QSettings::SystemScope,
+#endif
+        QCoreApplication::organizationName(),
+        application,
+        parent
+    )
+    {
+        setFallbacksEnabled(false);
+    }
+};
+
+
 QDaemonState::Data::Data(const QString & daemonName)
     : name(daemonName), initdPrefix(defaultInitDPath), dbusPrefix(defaultDBusPath), dbusTimeout(defaultDBusTimeout)
 {
@@ -117,6 +138,10 @@ void QDaemonState::generatePListPath()
     }
     else
         d.plistPath = QStringLiteral("/Library/LaunchDaemons");
+
+    QDaemonSettings settings(d.name);
+    QFileInfo settingsFileInfo(settings.fileName());
+    d.plistPath += QStringLiteral("/") + settingsFileInfo.fileName();
 }
 
 bool QDaemonState::load()
@@ -128,8 +153,7 @@ bool QDaemonState::load()
     }
 #endif
 
-    QSettings settings(QSettings::SystemScope, QCoreApplication::organizationName(), d.name);
-    settings.setFallbacksEnabled(false);
+    QDaemonSettings settings(d.name);
 
     if (settings.allKeys().size() <= 0)
         return false;
@@ -167,8 +191,7 @@ bool QDaemonState::save() const
     if (d.path.isEmpty() || d.executable.isEmpty() || d.directory.isEmpty() || d.service.isEmpty())
         return false;
 
-    QSettings settings(QSettings::SystemScope, QCoreApplication::organizationName(), d.name);
-    settings.setFallbacksEnabled(false);
+    QDaemonSettings settings(d.name);
 
     // Serialize the settings
     settings.setValue(QStringLiteral("Path"), d.path);
@@ -192,8 +215,7 @@ bool QDaemonState::save() const
 
 void QDaemonState::clear()
 {
-    QSettings settings(QSettings::SystemScope, QCoreApplication::organizationName(), d.name);
-    settings.setFallbacksEnabled(false);
+    QDaemonSettings settings(d.name);
     settings.clear();
 }
 
