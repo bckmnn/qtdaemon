@@ -131,7 +131,9 @@ bool QDaemonController::install(const QString & path, const QStringList & argume
         d->state.clear();
         return false;
     }
-
+    if (!d->state.save()) {
+        return false;
+    }
     return true;
 }
 
