@@ -103,6 +103,7 @@ bool QDaemonControllerPrivate::uninstall()
         return false;
     }
 
+    state.generatePListPath();
     const QString plistPath = state.plistPath();
 
     if (!QFile::remove(plistPath)) {
