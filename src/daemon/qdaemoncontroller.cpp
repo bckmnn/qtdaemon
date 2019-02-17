@@ -39,8 +39,8 @@ QT_DAEMON_BEGIN_NAMESPACE
 
     \warning The constructor will try to change the current working directory to the daemon's location if it's known, or to the controller application's path if not.
 */
-QDaemonController::QDaemonController(const QString & name, QObject * parent)
-    : QObject(parent), d_ptr(new QDaemonControllerPrivate(name, this))
+QDaemonController::QDaemonController(const QString & name, DaemonScope scope, QObject * parent)
+    : QObject(parent), d_ptr(new QDaemonControllerPrivate(name, scope, this))
 {
     Q_ASSERT_X(qApp, Q_FUNC_INFO, "You must create the application object first.");
 
@@ -229,8 +229,8 @@ QString QDaemonController::dbusConfigurationPrefix() const
 
 /*!
 */
-QDaemonControllerPrivate::QDaemonControllerPrivate(const QString & name, QDaemonController * q)
-    : q_ptr(q), state(name)
+QDaemonControllerPrivate::QDaemonControllerPrivate(const QString & name, DaemonScope scope, QDaemonController * q)
+    : q_ptr(q), state(name, scope)
 {
 }
 

@@ -38,14 +38,18 @@ enum DaemonStatus
     NotRunningStatus
 };
 
+enum DaemonScope
+{
+    SystemScope,
+    UserScope
+};
+
 enum DaemonFlag
 {
     // Windows
     UpdatePathFlag = 0x01,
-    // macOS
-    AgentFlag = 0x81,
-    UserAgentFlag = 0x83        // Overlap AgentFlag if it's not set
 };
+
 Q_DECLARE_FLAGS(QDaemonFlags, DaemonFlag)
 Q_DECLARE_OPERATORS_FOR_FLAGS(QDaemonFlags)
 

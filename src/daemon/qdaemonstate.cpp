@@ -44,13 +44,9 @@ static const qint32 defaultDBusTimeout = 30;
 class QDaemonSettings : public QSettings
 {
 public:
-    QDaemonSettings(const QString & application, QObject * parent=nullptr)
+    QDaemonSettings(DaemonScope scope, const QString & application, QObject * parent=nullptr)
     : QSettings(
-#if defined(Q_OS_OSX)
-        QSettings::UserScope,
-#else
-        QSettings::SystemScope,
-#endif
+        scope == QtDaemon::UserScope ? QSettings::UserScope : QSettings::SystemScope,
         QCoreApplication::organizationName(),
         application,
         parent
@@ -61,15 +57,15 @@ public:
 };
 
 
-QDaemonState::Data::Data(const QString & daemonName)
-    : name(daemonName), initdPrefix(defaultInitDPath), dbusPrefix(defaultDBusPath), dbusTimeout(defaultDBusTimeout)
+QDaemonState::Data::Data(const QString & daemonName, DaemonScope scope)
+    : name(daemonName), initdPrefix(defaultInitDPath), dbusPrefix(defaultDBusPath), dbusTimeout(defaultDBusTimeout), scope(scope)
 {
     qRegisterMetaType<QDaemonFlags>();
     qRegisterMetaTypeStreamOperators<QDaemonFlags>();
 }
 
-QDaemonState::QDaemonState(const QString & name)
-    : loaded(false), d(name)
+QDaemonState::QDaemonState(const QString & name, DaemonScope scope)
+    : loaded(false), d(name, scope)
 {
 }
 
@@ -130,16 +126,17 @@ QString QDaemonState::initdScriptPath() const
 
 void QDaemonState::generatePListPath()
 {
-    if (d.flags.testFlag(AgentFlag))  {
-        if (d.flags.testFlag(UserAgentFlag))
-            d.plistPath = QStringLiteral("%1/Library/LaunchAgents").arg(QDir::homePath());
-        else
-            d.plistPath = QStringLiteral("/Library/LaunchAgents");
+    switch (d.scope)
+    {
+    case QtDaemon::UserScope:
+        d.plistPath = QStringLiteral("%1/Library/LaunchAgents").arg(QDir::homePath());
+        break;
+    case QtDaemon::SystemScope:
+        d.plistPath = QStringLiteral("/Library/LaunchAgents");
+        break;
     }
-    else
-        d.plistPath = QStringLiteral("/Library/LaunchDaemons");
 
-    QDaemonSettings settings(d.name);
+    QDaemonSettings settings(d.scope, d.name);
     QFileInfo settingsFileInfo(settings.fileName());
     d.plistPath += QStringLiteral("/") + settingsFileInfo.fileName();
 }
@@ -153,7 +150,7 @@ bool QDaemonState::load()
     }
 #endif
 
-    QDaemonSettings settings(d.name);
+    QDaemonSettings settings(d.scope, d.name);
 
     if (settings.allKeys().size() <= 0)
         return false;
@@ -191,7 +188,7 @@ bool QDaemonState::save() const
     if (d.path.isEmpty() || d.executable.isEmpty() || d.directory.isEmpty() || d.service.isEmpty())
         return false;
 
-    QDaemonSettings settings(d.name);
+    QDaemonSettings settings(d.scope, d.name);
 
     // Serialize the settings
     settings.setValue(QStringLiteral("Path"), d.path);
@@ -215,7 +212,7 @@ bool QDaemonState::save() const
 
 void QDaemonState::clear()
 {
-    QDaemonSettings settings(d.name);
+    QDaemonSettings settings(d.scope, d.name);
     settings.clear();
 }
 

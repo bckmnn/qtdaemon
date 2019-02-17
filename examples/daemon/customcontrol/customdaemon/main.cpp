@@ -40,7 +40,7 @@ int main(int argc, char ** argv)
 
     QCoreApplication app(argc, argv);
 
-    QDaemon daemon("QtDaemon Custom Control example");
+    QDaemon daemon(QStringLiteral("QtDaemon Custom Control example"), QtDaemon::SystemScope);
 
     CustomDaemon controller;
 
