@@ -46,7 +46,7 @@ class Q_DAEMON_EXPORT QDaemon : public QObject
     Q_PRIVATE_SLOT(d_func(), void _q_stop())
 
 public:
-    explicit QDaemon(const QString &, QObject * = Q_NULLPTR);
+    explicit QDaemon(const QString &, DaemonScope scope, QObject * = Q_NULLPTR);
 
     bool isValid() const;
 

@@ -57,7 +57,7 @@ class Q_DAEMON_LOCAL QDaemonPrivate
     Q_DECLARE_PUBLIC(QDaemon)
 
 public:
-    explicit QDaemonPrivate(const QString &, QDaemon *);
+    explicit QDaemonPrivate(const QString &, DaemonScope scope, QDaemon *);
 
     void _q_start();
     void _q_stop();
@@ -74,8 +74,8 @@ private:
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-inline QDaemonPrivate::QDaemonPrivate(const QString & name, QDaemon * q)
-    : q_ptr(q), state(name)
+inline QDaemonPrivate::QDaemonPrivate(const QString & name, DaemonScope scope, QDaemon * q)
+    : q_ptr(q), state(name, scope)
 {
 }
 

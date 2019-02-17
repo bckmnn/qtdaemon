@@ -58,8 +58,8 @@ int main(int argc, char ** argv)
 
     parser.parse(QCoreApplication::arguments());
 
-    QDaemonController controller("QtDaemon Custom Control example");
-    controller.setFlags(QtDaemon::UpdatePathFlag | QtDaemon::AgentFlag | QtDaemon::UserAgentFlag);
+    QDaemonController controller(QStringLiteral("QtDaemon Custom Control example"), QtDaemon::SystemScope);
+    controller.setFlags(QtDaemon::UpdatePathFlag);
     controller.setDescription(QStringLiteral("The example demonstrates creating a fully customizable daemon and its corresponding controller application."));
 
     QTextStream out(stdout);

@@ -34,8 +34,8 @@
 
 QT_DAEMON_BEGIN_NAMESPACE
 
-QDaemon::QDaemon(const QString & name, QObject * parent)
-    : QObject(parent), d_ptr(new QDaemonPrivate(name, this))
+QDaemon::QDaemon(const QString & name, DaemonScope scope, QObject * parent)
+    : QObject(parent), d_ptr(new QDaemonPrivate(name, scope, this))
 {
     Q_ASSERT_X(qApp, Q_FUNC_INFO, "You must create the application object first.");
 

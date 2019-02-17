@@ -69,7 +69,7 @@ class Q_DAEMON_EXPORT QDaemonControllerPrivate
     Q_DECLARE_PUBLIC(QDaemonController)
 
 public:
-    QDaemonControllerPrivate(const QString &, QDaemonController *);
+    QDaemonControllerPrivate(const QString &, DaemonScope scope, QDaemonController *);
 
     bool start();
     bool stop();

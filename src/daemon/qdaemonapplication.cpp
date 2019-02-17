@@ -152,7 +152,7 @@ void QDaemonApplicationPrivate::_q_daemon_exec()
     Q_Q(QDaemonApplication);
     QStringList arguments = QCoreApplication::arguments();
     if (arguments.size() <= 1)  {
-        QDaemon * daemon = new QDaemon(QCoreApplication::applicationName(), q);
+        QDaemon * daemon = new QDaemon(QCoreApplication::applicationName(), QtDaemon::SystemScope, q);
         if (daemon->isValid())  {
             // Connect the signal handlers
             std::signal(SIGTERM, QDaemonApplicationPrivate::processSignalHandler);
@@ -198,9 +198,7 @@ void QDaemonApplicationPrivate::_q_daemon_exec()
     parser.addOption(dbusPrefix);
 #elif defined(Q_OS_OSX)
     const QCommandLineOption agent(QT_DAEMON_TRANSLATE("agent"), QT_DAEMON_TRANSLATE("Sets the daemon as an agent"));
-    const QCommandLineOption userAgent(QT_DAEMON_TRANSLATE("user"), QT_DAEMON_TRANSLATE("Sets the agent as user local (affects only the agent option)"));
     parser.addOption(agent);
-    parser.addOption(userAgent);
 #endif
 
     parser.parse(arguments);
@@ -210,16 +208,17 @@ void QDaemonApplicationPrivate::_q_daemon_exec()
 #if defined(Q_OS_WIN)
     if (parser.isSet(updatePath))
         flags |= QtDaemon::UpdatePathFlag;
-#elif defined(Q_OS_OSX)
-    if (parser.isSet(agent))  {
-        flags |= QtDaemon::AgentFlag;
-        if (parser.isSet(userAgent))
-            flags |= QtDaemon::UserAgentFlag;
-    }
+#endif
+
+    QtDaemon::DaemonScope scope = QtDaemon::SystemScope;
+
+#if defined(Q_OS_OSX)
+    if (parser.isSet(agent))
+        scope = QtDaemon::UserScope;
 #endif
 
     // Initialize the controller
-    QDaemonController controller(QCoreApplication::applicationName());
+    QDaemonController controller(QCoreApplication::applicationName(), scope);
     controller.setFlags(controller.flags() | flags);
 #if defined(Q_OS_LINUX)
     if (parser.isSet(initdPrefix))

@@ -49,7 +49,7 @@ public:
     Q_PROPERTY(QString initScriptPrefix READ initScriptPrefix WRITE setInitScriptPrefix)
     Q_PROPERTY(QString dbusConfigurationPrefix READ dbusConfigurationPrefix WRITE setDBusConfigurationPrefix)
 
-    explicit QDaemonController(const QString &, QObject * = Q_NULLPTR);
+    explicit QDaemonController(const QString &, DaemonScope scope, QObject * = Q_NULLPTR);
 
     bool start();
     bool start(const QStringList &);

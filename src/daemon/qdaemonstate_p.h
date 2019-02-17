@@ -50,7 +50,7 @@ QT_DAEMON_BEGIN_NAMESPACE
 class Q_DAEMON_LOCAL QDaemonState
 {
 public:
-    QDaemonState(const QString &);
+    QDaemonState(const QString &, DaemonScope);
 
     // Init and (de)serialization
     bool initialize(const QString &, const QStringList &);
@@ -93,12 +93,13 @@ private:
     bool loaded;
     struct Data
     {
-        Data(const QString &);
+        Data(const QString &, DaemonScope);
 
         QString name, path, executable, directory, description, service, initdPrefix, dbusPrefix, plistPath;
         QStringList arguments;
         qint32 dbusTimeout;
         QDaemonFlags flags;
+        DaemonScope scope;
     } d;
 };
 
