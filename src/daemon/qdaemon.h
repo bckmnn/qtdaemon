@@ -46,7 +46,8 @@ class Q_DAEMON_EXPORT QDaemon : public QObject
     Q_PRIVATE_SLOT(d_func(), void _q_stop())
 
 public:
-    explicit QDaemon(const QString &, DaemonScope scope, QObject * = Q_NULLPTR);
+    explicit QDaemon(QObject * = nullptr);
+    explicit QDaemon(DaemonScope, QObject * = nullptr);
 
     bool isValid() const;
 
@@ -60,6 +61,13 @@ Q_SIGNALS:
 private:
     QDaemonPrivate * d_ptr;
 };
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
+inline QDaemon::QDaemon(QObject * parent)
+    : QDaemon(SystemScope, parent)
+{
+}
 
 QT_DAEMON_END_NAMESPACE
 

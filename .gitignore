@@ -1,1 +1,10 @@
 *.pro.user
+*.cache
+*.stash
+*.version*
+*.sh
+Makefile
+.moc
+.obj
+.pch
+.rcc

@@ -40,70 +40,60 @@ static const QString defaultInitDPath = QStringLiteral("/etc/init.d");
 static const QString defaultDBusPath = QStringLiteral("/etc/dbus-1/system.d");
 static const qint32 defaultDBusTimeout = 30;
 
-
-class QDaemonSettings : public QSettings
+QDaemonState::Data::Data(const QDaemonState & state)
+    : path(QStringLiteral("Path"), state),
+      description(QStringLiteral("Description"), state),
+#ifdef Q_OS_LINUX
+      initdPrefix(QStringLiteral("InitDPrefix"), defaultInitDPath, state),
+      dbusPrefix(QStringLiteral("DBusPrefix"), defaultDBusPath, state),
+      dbusTimeout(QStringLiteral("DBusTimeout"), defaultDBusTimeout, state),
+#endif
+      arguments(QStringLiteral("Arguments"), state),
+      flags(QStringLiteral("Flags"), state),
+      scope(DaemonScope::SystemScope)
 {
-public:
-    QDaemonSettings(DaemonScope scope, const QString & application, QObject * parent=nullptr)
-    : QSettings(
-        scope == QtDaemon::UserScope ? QSettings::UserScope:QSettings::SystemScope,
-        QCoreApplication::organizationName(),
-        application,
-        parent
-    )
-    {
-        setFallbacksEnabled(false);
-    }
-};
+    qRegisterMetaType<DaemonFlags>();
+    qRegisterMetaTypeStreamOperators<DaemonFlags>();
 
+    // Update the directory and executable file name from the path
+    path.observe([this] (const QString & exe) -> void  {
+        QFileInfo info(exe);
+        if (!info.isFile() || !info.isExecutable())
+            return;   // Not a file, not an executable
 
-QDaemonState::Data::Data(const QString & daemonName, DaemonScope scope)
-    : name(daemonName), initdPrefix(defaultInitDPath), dbusPrefix(defaultDBusPath), dbusTimeout(defaultDBusTimeout), scope(scope)
-{
-    qRegisterMetaType<QDaemonFlags>();
-    qRegisterMetaTypeStreamOperators<QDaemonFlags>();
+        executable = info.fileName();
+        directory = info.dir().absolutePath();
+    });
+
+    name = QCoreApplication::applicationName();
+    QObject::connect(qApp, &QCoreApplication::applicationNameChanged, [this] () -> void {
+        name = QCoreApplication::applicationName();
+    });
 }
 
-QDaemonState::QDaemonState(const QString & name, DaemonScope scope)
-    : loaded(false), d(name, scope)
+QDaemonState::QDaemonState()
+    : d(*this)
 {
 }
 
-bool QDaemonState::initialize(const QString & exe, const QStringList & arguments)
+bool QDaemonState::create(const QString & exe, const QStringList & arguments)
 {
     QFileInfo info(exe);
     if (!info.isFile() || !info.isExecutable())
         return false;   // Not a file, not an executable
 
-    setPath(exe);
-    setArguments(arguments);
-
-    // Construct the service name
-    QByteArray path = d.path.toUtf8();
-    quint16 checksum = qChecksum(path.data(), path.size());
-
-    QString serviceBase, organizationDomain = QCoreApplication::organizationDomain();
-    if (!organizationDomain.isEmpty())  {
-        QStringList elements = organizationDomain.split(QLatin1Char('.'));
-        std::reverse(elements.begin(), elements.end());
-
-        serviceBase = elements.join(QLatin1Char('.'));
-    }
-    else
-        serviceBase = QStringLiteral("io.qt.QtDaemon");
-
-    d.service = QStringLiteral("%1.%2-%3").arg(serviceBase).arg(info.fileName()).arg(checksum);
+    d.path = info.absoluteFilePath();
+    d.arguments = arguments;
+    d.service = generateServiceName();
 
     return true;
 }
 
-void QDaemonState::setPath(const QString & path)
+bool QDaemonState::isKnown() const
 {
-    QFileInfo info(path);
-    d.path = info.absoluteFilePath();
-    d.executable = info.fileName();
-    d.directory = info.dir().absolutePath();
+    return !QString(d.path).isEmpty() && !QString(d.executable).isEmpty() && !QString(d.directory).isEmpty() && !d.service.isEmpty();
 }
+
 
 QString QDaemonState::dbusConfigPath() const
 {
@@ -112,7 +102,6 @@ QString QDaemonState::dbusConfigPath() const
         return QString();
 
     return dbusPrefix.filePath(d.service + QStringLiteral(".conf"));
-
 }
 
 QString QDaemonState::initdScriptPath() const
@@ -124,32 +113,49 @@ QString QDaemonState::initdScriptPath() const
     return initdPrefix.filePath(d.executable);
 }
 
-void QDaemonState::generatePListPath()
+QString QDaemonState::plistPath() const
 {
-    switch (d.scope) {
-    case QtDaemon::UserScope:
-        d.plistPath = QStringLiteral("%1/Library/LaunchAgents").arg(QDir::homePath());
-        break;
-    case QtDaemon::SystemScope:
-        d.plistPath = QStringLiteral("/Library/LaunchAgents");
-        break;
-    }
+    QDir prefix(plistPrefix());
+    if (!prefix.exists() || d.executable.isEmpty())
+        return QString();
 
-    QDaemonSettings settings(d.scope, d.name);
-    QFileInfo settingsFileInfo(settings.fileName());
-    d.plistPath += QStringLiteral("/") + settingsFileInfo.fileName();
+    return prefix.filePath(d.service);
 }
 
+QString QDaemonState::generateServiceName() const
+{
+    // Construct the service name
+    QString serviceBase, organizationDomain = QCoreApplication::organizationDomain();
+    if (!organizationDomain.isEmpty())  {
+        QStringList elements = organizationDomain.split(QLatin1Char('.'));
+        std::reverse(elements.begin(), elements.end());
+
+        serviceBase = elements.join(QLatin1Char('.'));
+    }
+    else
+        serviceBase = QStringLiteral("QtDaemon");
+
+    return QStringLiteral("%1.%2").arg(serviceBase, d.name);
+}
+/*
 bool QDaemonState::load()
 {
-#if defined(Q_OS_WIN)
-    if (QCoreApplication::organizationName().isEmpty())  {
-        qWarning("You should provide an organization name! QCoreApplication::organizationName() must not return an empty string.");
+    QString name = QCoreApplication::applicationName();
+    if (name.isEmpty() || name == QFileInfo(QCoreApplication::applicationFilePath()).baseName())  {
+        qWarning("QCoreApplication::applicationName() must be set");
         return false;
     }
-#endif
 
-    QDaemonSettings settings(d.scope, d.name);
+    QString organization = QCoreApplication::organizationName();
+    if (organization.isEmpty())  {
+        qWarning("QCoreApplication::organizationName() must not return an empty string.");
+        return false;
+    }
+
+    // IMPORTANT:
+    // We are going to get speculative loads (on construction)
+    // Try to load the settings into the state
+
 
     if (settings.allKeys().size() <= 0)
         return false;
@@ -161,18 +167,18 @@ bool QDaemonState::load()
     d.description = settings.value(QStringLiteral("Description")).value<QString>();
     d.service = settings.value(QStringLiteral("Service")).value<QString>();
     d.arguments = settings.value(QStringLiteral("Arguments")).value<QStringList>();
-    d.flags = settings.value(QStringLiteral("Flags")).value<QDaemonFlags>();
+    d.flags = settings.value(QStringLiteral("Flags")).value<DaemonFlags>();
 
 #if defined(Q_OS_LINUX)
     d.initdPrefix = settings.value(QStringLiteral("InitDPrefix")).value<QString>();
     d.dbusPrefix = settings.value(QStringLiteral("DBusPrefix")).value<QString>();
     d.dbusTimeout = settings.value(QStringLiteral("DBusTimeout")).value<qint32>();
 #elif defined(Q_OS_OSX)
-    d.plistPath = settings.value(QStringLiteral("PListFilePath")).value<QString>();
+    d.plistPrefix = settings.value(QStringLiteral("PListPrefix")).value<QString>();
 #endif
 
-    loaded = !d.path.isEmpty() && !d.executable.isEmpty() && !d.directory.isEmpty() && !d.service.isEmpty();
-    return loaded;
+    d.loaded = !d.path.isEmpty() && !d.executable.isEmpty() && !d.directory.isEmpty() && !d.service.isEmpty();
+    return d.loaded;
 }
 
 bool QDaemonState::save() const
@@ -187,46 +193,74 @@ bool QDaemonState::save() const
     if (d.path.isEmpty() || d.executable.isEmpty() || d.directory.isEmpty() || d.service.isEmpty())
         return false;
 
-    QDaemonSettings settings(d.scope, d.name);
+    QSettings settings(d.scope == QtDaemon::UserScope ? QSettings::UserScope : QSettings::SystemScope,
+            QCoreApplication::organizationName(), d.name);
+    settings.setFallbacksEnabled(false);
 
     // Serialize the settings
     settings.setValue(QStringLiteral("Path"), d.path);
-    settings.setValue(QStringLiteral("Executable"), d.executable);
-    settings.setValue(QStringLiteral("Directory"), d.directory);
     settings.setValue(QStringLiteral("Description"), d.description);
-    settings.setValue(QStringLiteral("Service"), d.service);
     settings.setValue(QStringLiteral("Arguments"), d.arguments);
     settings.setValue(QStringLiteral("Flags"), QVariant::fromValue(d.flags));
 
-#if defined (Q_OS_LINUX)
+#if defined(Q_OS_LINUX)
     settings.setValue(QStringLiteral("InitDPrefix"), d.initdPrefix);
     settings.setValue(QStringLiteral("DBusPrefix"), d.dbusPrefix);
     settings.setValue(QStringLiteral("DBusTimeout"), d.dbusTimeout);
-#elif defined(Q_OS_OSX)
-    settings.setValue(QStringLiteral("PListFilePath"), d.plistPath);
 #endif
 
     return true;
 }
-
+*/
 void QDaemonState::clear()
 {
-    QDaemonSettings settings(d.scope, d.name);
-    settings.clear();
+//    QDaemonSettings settings(d.scope, d.name);
+//    settings.clear();
 }
 
-QDataStream & operator << (QDataStream & out, const QDaemonFlags & flags)
+void QDaemonState::invalidate()
 {
-    out << static_cast<QDaemonFlags::Int>(flags);
+    d.path.invalidate();
+    d.description.invalidate();
+#ifdef Q_OS_LINUX
+    d.initdPrefix.invalidate();
+    d.dbusPrefix.invalidate();
+    d.dbusTimeout.invalidate();
+#endif
+    d.arguments.invalidate();
+    d.flags.invalidate();
+}
+
+
+QString QDaemonState::plistPrefix() const
+{
+#ifndef Q_OS_OSX
+    qWarning("QDaemonState::plistPrefix() is meaningfull only on OSX");
+#endif
+
+    switch (d.scope)
+    {
+    case QtDaemon::UserScope:
+        return QStringLiteral("%1/Library/LaunchAgents").arg(QDir::homePath());
+    case QtDaemon::SystemScope:
+        return QStringLiteral("/Library/LaunchAgents");
+    }
+
+    Q_UNREACHABLE();
+}
+
+QDataStream & operator << (QDataStream & out, const DaemonFlags & flags)
+{
+    out << static_cast<DaemonFlags::Int>(flags);
     return out;
 }
 
-QDataStream & operator >> (QDataStream & in, QDaemonFlags & flags)
+QDataStream & operator >> (QDataStream & in, DaemonFlags & flags)
 {
-    QDaemonFlags::Int value;
+    DaemonFlags::Int value;
     in >> value;
 
-    flags = QDaemonFlags(value);
+    flags = DaemonFlags(value);
     return in;
 }
 

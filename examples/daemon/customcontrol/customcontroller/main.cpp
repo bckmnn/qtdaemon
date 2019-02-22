@@ -37,8 +37,9 @@ using namespace QtDaemon;
 
 int main(int argc, char ** argv)
 {
-    QCoreApplication::setOrganizationDomain("qtdaemon.examples");
-    QCoreApplication::setOrganizationName("QtDaemon examples");
+    QCoreApplication::setOrganizationDomain(QStringLiteral("qtdaemon.examples"));
+    QCoreApplication::setOrganizationName(QStringLiteral("QtDaemon examples"));
+    QCoreApplication::setApplicationName(QStringLiteral("QtDaemon Custom Control example"));
 
     QCoreApplication app(argc, argv);
 
@@ -58,9 +59,10 @@ int main(int argc, char ** argv)
 
     parser.parse(QCoreApplication::arguments());
 
-    QDaemonController controller(QStringLiteral("QtDaemon Custom Control example"), QtDaemon::SystemScope);
+    QDaemonController controller;
     controller.setFlags(QtDaemon::UpdatePathFlag);
     controller.setDescription(QStringLiteral("The example demonstrates creating a fully customizable daemon and its corresponding controller application."));
+    controller.setScope(SystemScope);
 
     QTextStream out(stdout);
 

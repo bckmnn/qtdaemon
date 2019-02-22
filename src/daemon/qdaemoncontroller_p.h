@@ -69,13 +69,13 @@ class Q_DAEMON_EXPORT QDaemonControllerPrivate
     Q_DECLARE_PUBLIC(QDaemonController)
 
 public:
-    QDaemonControllerPrivate(const QString &, DaemonScope scope, QDaemonController *);
+    QDaemonControllerPrivate(QDaemonController *);
 
     bool start();
     bool stop();
     bool install();
     bool uninstall();
-    bool saveState();
+//    bool saveState();
 
     QtDaemon::DaemonStatus status();
 

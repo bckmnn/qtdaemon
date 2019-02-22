@@ -44,32 +44,69 @@
 
 #include <QtCore/qhash.h>
 #include <QtCore/qvariant.h>
+#include <QtCore/qsettings.h>
+#include <QtCore/qcoreapplication.h>
+#include <QtCore/qvariant.h>
+
+#include <functional>
 
 QT_DAEMON_BEGIN_NAMESPACE
+
+class QDaemonState;
+
+template <typename Type>
+class QDaemonStateField
+{
+public:
+    typedef std::function<void(const Type &)> Observer;
+
+    QDaemonStateField(const QString &, const QDaemonState &);
+    QDaemonStateField(const QString &, const Type &, const QDaemonState &);
+
+    operator Type () const;
+    QDaemonStateField<Type> & operator = (const Type &);
+
+    void observe(const Observer &);
+
+    void save();
+    void invalidate();
+
+private:
+    bool needsLoad() const;
+
+    const QDaemonState & state;
+    const QString key;
+    mutable Type value;
+    mutable bool loaded;
+    bool dirty;
+    Observer callback;
+};
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
 class Q_DAEMON_LOCAL QDaemonState
 {
 public:
-    QDaemonState(const QString &, DaemonScope);
+    QDaemonState();
 
     // Init and (de)serialization
-    bool initialize(const QString &, const QStringList &);
-    bool load();
-    bool isLoaded() const;
-    bool save() const;
+    bool create(const QString &, const QStringList &);
+    bool isKnown() const;
     void clear();
+    void invalidate();
 
     // Common
     void setPath(const QString &);
     void setDescription(const QString &);
     void setArguments(const QStringList &);
-    void setFlags(const QDaemonFlags &);
+    void setFlags(const DaemonFlags &);
+    void setScope(DaemonScope);
+
     // Linux
     void setInitDPrefix(const QString &);
     void setDBusPrefix(const QString &);
     void setDBusTimeout(qint32);
     // macOS
-    void generatePListPath();
 
     // Common
     QString name() const;
@@ -79,7 +116,9 @@ public:
     QString description() const;
     QString service() const;
     QStringList arguments() const;
-    QDaemonFlags flags() const;
+    DaemonFlags flags() const;
+    DaemonScope scope() const;
+
     // Linux
     QString initdPrefix() const;
     QString dbusPrefix() const;
@@ -87,28 +126,30 @@ public:
     QString dbusConfigPath() const;
     qint32 dbusTimeout() const;
     // macOS
+    QString plistPrefix() const;
     QString plistPath() const;
 
 private:
-    bool loaded;
+    QString generateServiceName() const;
+
     struct Data
     {
-        Data(const QString &, DaemonScope);
+        Data(const QDaemonState &);
 
-        QString name, path, executable, directory, description, service, initdPrefix, dbusPrefix, plistPath;
-        QStringList arguments;
-        qint32 dbusTimeout;
-        QDaemonFlags flags;
+        QDaemonStateField<QString> path, description;
+#ifdef Q_OS_LINUX
+        QDaemonStateField<QString> initdPrefix, dbusPrefix;
+        QDaemonStateField<qint32> dbusTimeout;
+#endif
+        QDaemonStateField<QStringList> arguments;
+        QDaemonStateField<DaemonFlags> flags;
+        QString executable, directory, service, name;
+
         DaemonScope scope;
     } d;
 };
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------- //
-
-inline bool QDaemonState::isLoaded() const
-{
-    return loaded;
-}
 
 inline void QDaemonState::setDescription(const QString & description)
 {
@@ -120,9 +161,19 @@ inline void QDaemonState::setArguments(const QStringList & arguments)
     d.arguments = arguments;
 }
 
-inline void QDaemonState::setFlags(const QDaemonFlags & flags)
+inline void QDaemonState::setFlags(const DaemonFlags & flags)
 {
     d.flags = flags;
+}
+
+inline void QDaemonState::setScope(DaemonScope scope)
+{
+    if (d.scope == scope)
+        return;
+
+    d.scope = scope;
+    invalidate();
+
 }
 
 inline void QDaemonState::setInitDPrefix(const QString & prefix)
@@ -142,7 +193,7 @@ inline void QDaemonState::setDBusTimeout(qint32 timeout)
 
 inline QString QDaemonState::name() const
 {
-    return d.name;
+    return QCoreApplication::applicationName();
 }
 
 inline QString QDaemonState::path() const
@@ -175,7 +226,7 @@ inline QStringList QDaemonState::arguments() const
     return d.arguments;
 }
 
-inline QDaemonFlags QDaemonState::flags() const
+inline DaemonFlags QDaemonState::flags() const
 {
     return d.flags;
 }
@@ -195,13 +246,92 @@ inline qint32 QDaemonState::dbusTimeout() const
     return d.dbusTimeout;
 }
 
-inline QString QDaemonState::plistPath() const
+inline DaemonScope QDaemonState::scope() const
 {
-    return d.plistPath;
+    return d.scope;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
+template <typename Type>
+inline QDaemonStateField<Type>::QDaemonStateField(const QString & key, const QDaemonState & state)
+    : QDaemonStateField(key, Type(), state)
+{
+}
+
+template <typename Type>
+inline QDaemonStateField<Type>::QDaemonStateField(const QString & settingsKey, const Type & defaultValue, const QDaemonState & daemonState)
+    : state(daemonState), key(settingsKey), value(defaultValue), loaded(false), dirty(false), callback(nullptr)
+{
+}
+
+template <typename Type>
+inline QDaemonStateField<Type>::operator Type () const
+{
+    // Load from the settings if it was neither loaded nor overwritten
+    if (needsLoad())  {
+        QSettings::Scope scope = (state.scope() == QtDaemon::UserScope ? QSettings::UserScope : QSettings::SystemScope);
+        QSettings settings(scope, QCoreApplication::organizationName(), QCoreApplication::applicationName());
+        settings.setFallbacksEnabled(false);
+
+        if (!settings.contains(key))
+            return value;
+
+        QVariant data = settings.value(key);
+        value = data.value<Type>();
+        loaded = true;
+    }
+
+    return value;
+}
+
+template <typename Type>
+inline QDaemonStateField<Type> & QDaemonStateField<Type>::operator = (const Type & newValue)
+{
+    if (value == newValue)
+        return *this;
+
+    value = newValue;
+    dirty = true;
+    return *this;
+}
+
+template <typename Type>
+inline bool QDaemonStateField<Type>::needsLoad() const
+{
+    return !loaded && !dirty;
+}
+
+template <typename Type>
+inline void QDaemonStateField<Type>::save()
+{
+    if (!dirty)
+        return;
+
+    QSettings::Scope scope = (state.scope() == QtDaemon::UserScope ? QSettings::UserScope : QSettings::SystemScope);
+    QSettings settings(scope, QCoreApplication::organizationName(), QCoreApplication::applicationName());
+    settings.setFallbacksEnabled(false);
+
+    settings.setValue(key, QVariant::fromValue<Type>(value));
+
+    loaded = true;
+    dirty = false;
+}
+
+template <typename Type>
+inline void QDaemonStateField<Type>::invalidate()
+{
+    loaded = false;
+}
+
+template <typename Type>
+inline void QDaemonStateField<Type>::observe(const Observer & observer)
+{
+    callback = observer;
 }
 
 QT_DAEMON_END_NAMESPACE
 
-Q_DECLARE_METATYPE(QtDaemon::QDaemonFlags)
+Q_DECLARE_METATYPE(QtDaemon::DaemonFlags)
 
 #endif // QDAEMONSTATE_P_H

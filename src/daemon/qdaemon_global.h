@@ -50,11 +50,11 @@ enum DaemonFlag
     UpdatePathFlag = 0x01,
 };
 
-Q_DECLARE_FLAGS(QDaemonFlags, DaemonFlag)
-Q_DECLARE_OPERATORS_FOR_FLAGS(QDaemonFlags)
+Q_DECLARE_FLAGS(DaemonFlags, DaemonFlag)
+Q_DECLARE_OPERATORS_FOR_FLAGS(DaemonFlags)
 
-QDataStream & operator << (QDataStream & out, const QDaemonFlags &);
-QDataStream & operator >> (QDataStream & in, QDaemonFlags &);
+QDataStream & operator << (QDataStream & out, const DaemonFlags &);
+QDataStream & operator >> (QDataStream & in, DaemonFlags &);
 
 #ifdef QT_BUILD_DAEMON_LIB
 #define QT_DAEMON_TRANSLATE(text) QCoreApplication::translate("QtDaemon", QT_TRANSLATE_NOOP("QtDaemon", text))

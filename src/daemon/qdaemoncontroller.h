@@ -45,11 +45,12 @@ class Q_DAEMON_EXPORT QDaemonController : public QObject
 public:
     // TODO: Finish up the properties
     Q_PROPERTY(QString description READ description WRITE setDescription)
-    Q_PROPERTY(QDaemonFlags flags READ flags WRITE setFlags)
+    Q_PROPERTY(DaemonFlags flags READ flags WRITE setFlags)
     Q_PROPERTY(QString initScriptPrefix READ initScriptPrefix WRITE setInitScriptPrefix)
     Q_PROPERTY(QString dbusConfigurationPrefix READ dbusConfigurationPrefix WRITE setDBusConfigurationPrefix)
 
-    explicit QDaemonController(const QString &, DaemonScope scope, QObject * = Q_NULLPTR);
+    explicit QDaemonController(QObject * = nullptr);
+    explicit QDaemonController(DaemonScope scope, QObject * = nullptr);
 
     bool start();
     bool start(const QStringList &);
@@ -64,8 +65,11 @@ public:
     void setDescription(const QString &);
     QString description() const;
 
-    void setFlags(const QDaemonFlags &);
-    QDaemonFlags flags() const;
+    void setFlags(const DaemonFlags &);
+    DaemonFlags flags() const;
+
+    void setScope(DaemonScope);
+    DaemonScope scope() const;
 
     // Lunux only:
     void setInitScriptPrefix(const QString &);
@@ -77,6 +81,13 @@ public:
 private:
     QDaemonControllerPrivate * d_ptr;
 };
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
+inline QDaemonController::QDaemonController(QObject * parent)
+    : QDaemonController(SystemScope, parent)
+{
+}
 
 QT_DAEMON_END_NAMESPACE
 

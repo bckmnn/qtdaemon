@@ -39,15 +39,18 @@ QT_DAEMON_BEGIN_NAMESPACE
 
     \warning The constructor will try to change the current working directory to the daemon's location if it's known, or to the controller application's path if not.
 */
-QDaemonController::QDaemonController(const QString & name, DaemonScope scope, QObject * parent)
-    : QObject(parent), d_ptr(new QDaemonControllerPrivate(name, scope, this))
+QDaemonController::QDaemonController(DaemonScope scope, QObject * parent)
+    : QObject(parent), d_ptr(new QDaemonControllerPrivate(this))
 {
     Q_ASSERT_X(qApp, Q_FUNC_INFO, "You must create the application object first.");
 
+    setScope(scope);
+
+/*
     if (d_ptr->state.load())
         QDir::setCurrent(d_ptr->state.directory());
     else
-        QDir::setCurrent(QCoreApplication::applicationDirPath());
+        QDir::setCurrent(QCoreApplication::applicationDirPath());*/
 }
 
 /*!
@@ -56,7 +59,7 @@ QDaemonController::QDaemonController(const QString & name, DaemonScope scope, QO
 bool QDaemonController::start()
 {
     Q_D(QDaemonController);
-    if (!d->state.isLoaded())  {
+    if (!d->state.isKnown())  {
         d_ptr->lastError = QT_DAEMON_TRANSLATE("The daemon is not installed.");
         return false;
     }
@@ -70,25 +73,17 @@ bool QDaemonController::start()
 bool QDaemonController::start(const QStringList & arguments)
 {
     Q_D(QDaemonController);
-    if (!d->state.isLoaded())  {
+    if (!d->state.isKnown())  {
         d_ptr->lastError = QT_DAEMON_TRANSLATE("The daemon is not installed.");
         return false;
     }
 
     QStringList oldArguments = d->state.arguments();
-
     d->state.setArguments(arguments);
-    if (!d->saveState())  {
-        return false;
-    }
 
     bool ok = d->start();
 
     d->state.setArguments(oldArguments);
-    if (!d->saveState())  {
-        return false;
-    }
-
     return ok;
 }
 
@@ -98,7 +93,7 @@ bool QDaemonController::start(const QStringList & arguments)
 bool QDaemonController::stop()
 {
     Q_D(QDaemonController);
-    if (!d->state.isLoaded())  {
+    if (!d->state.isKnown())  {
         d_ptr->lastError = QT_DAEMON_TRANSLATE("The daemon is not installed.");
         return false;
     }
@@ -113,24 +108,25 @@ bool QDaemonController::stop()
 bool QDaemonController::install(const QString & path, const QStringList & arguments)
 {
     Q_D(QDaemonController);
-    if (d->state.isLoaded())  {
+    if (d->state.isKnown())  {
         d->lastError = QT_DAEMON_TRANSLATE("The daemon is already installed.");
         return false;
     }
 
-    if (!d->state.initialize(path, arguments))  {
+    if (!d->state.create(path, arguments))  {
         d->lastError = QT_DAEMON_TRANSLATE("Couldn't initialize the daemon configuration.");
         return false;
     }
 
-    if (!d->saveState())  {
+/*    if (!d->saveState())  {
         return false;
-    }
+    }*/
 
     if (!d->install())  {
         d->state.clear();
         return false;
     }
+
     return true;
 }
 
@@ -140,7 +136,7 @@ bool QDaemonController::install(const QString & path, const QStringList & argume
 bool QDaemonController::uninstall()
 {
     Q_D(QDaemonController);
-    if (!d->state.isLoaded())  {
+    if (!d->state.isKnown())  {
         d->lastError = QT_DAEMON_TRANSLATE("The daemon is not installed.");
         return false;
     }
@@ -183,16 +179,31 @@ QString QDaemonController::description() const
 /*!
     Daemon flags
 */
-void QDaemonController::setFlags(const QDaemonFlags & flags)
+void QDaemonController::setFlags(const DaemonFlags & flags)
 {
     Q_D(QDaemonController);
     d->state.setFlags(flags);
 }
 
-QDaemonFlags QDaemonController::flags() const
+DaemonFlags QDaemonController::flags() const
 {
     Q_D(const QDaemonController);
     return d->state.flags();
+}
+
+/*!
+    scope property
+*/
+void QDaemonController::setScope(DaemonScope scope)
+{
+    Q_D(QDaemonController);
+    d->state.setScope(scope);
+}
+
+DaemonScope QDaemonController::scope() const
+{
+    Q_D(const QDaemonController);
+    return d->state.scope();
 }
 
 /*!
@@ -229,17 +240,17 @@ QString QDaemonController::dbusConfigurationPrefix() const
 
 /*!
 */
-QDaemonControllerPrivate::QDaemonControllerPrivate(const QString & name, DaemonScope scope, QDaemonController * q)
-    : q_ptr(q), state(name, scope)
+QDaemonControllerPrivate::QDaemonControllerPrivate(QDaemonController * q)
+    : q_ptr(q)
 {
 }
-
+/*
 bool QDaemonControllerPrivate::saveState()
 {
     bool saved = state.save();
     if (!saved)
         lastError = QT_DAEMON_TRANSLATE("Couldn't save the daemon configuration.");
     return saved;
-}
+}*/
 
 QT_DAEMON_END_NAMESPACE

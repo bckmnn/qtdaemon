@@ -152,7 +152,7 @@ void QDaemonApplicationPrivate::_q_daemon_exec()
     Q_Q(QDaemonApplication);
     QStringList arguments = QCoreApplication::arguments();
     if (arguments.size() <= 1)  {
-        QDaemon * daemon = new QDaemon(QCoreApplication::applicationName(), QtDaemon::SystemScope, q);
+        QDaemon * daemon = new QDaemon(QtDaemon::SystemScope, q);
         if (daemon->isValid())  {
             // Connect the signal handlers
             std::signal(SIGTERM, QDaemonApplicationPrivate::processSignalHandler);
@@ -196,7 +196,9 @@ void QDaemonApplicationPrivate::_q_daemon_exec()
     const QCommandLineOption dbusPrefix(QT_DAEMON_TRANSLATE("dbus-prefix"), QT_DAEMON_TRANSLATE("Sets the path for the installed dbus configuration file"), QT_DAEMON_TRANSLATE("path"), QStringLiteral("/etc/dbus-1/system.d"));
     parser.addOption(initdPrefix);
     parser.addOption(dbusPrefix);
-#elif defined(Q_OS_OSX)
+#endif
+
+#if defined(Q_OS_OSX) || defined(Q_OS_LINUX)
     const QCommandLineOption agent(QT_DAEMON_TRANSLATE("agent"), QT_DAEMON_TRANSLATE("Sets the daemon as an agent"));
     parser.addOption(agent);
 #endif
@@ -204,7 +206,7 @@ void QDaemonApplicationPrivate::_q_daemon_exec()
     parser.parse(arguments);
 
     // Check the flags first
-    QDaemonFlags flags;
+    DaemonFlags flags;
 #if defined(Q_OS_WIN)
     if (parser.isSet(updatePath))
         flags |= QtDaemon::UpdatePathFlag;
@@ -218,7 +220,7 @@ void QDaemonApplicationPrivate::_q_daemon_exec()
 #endif
 
     // Initialize the controller
-    QDaemonController controller(QCoreApplication::applicationName(), scope);
+    QDaemonController controller(scope);
     controller.setFlags(controller.flags() | flags);
 #if defined(Q_OS_LINUX)
     if (parser.isSet(initdPrefix))

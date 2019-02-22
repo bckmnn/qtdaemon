@@ -31,24 +31,29 @@
 
 #include <QtCore/qcoreapplication.h>
 #include <QtCore/qdir.h>
+#include <QtCore/qfile.h>
 
 QT_DAEMON_BEGIN_NAMESPACE
 
-QDaemon::QDaemon(const QString & name, DaemonScope scope, QObject * parent)
-    : QObject(parent), d_ptr(new QDaemonPrivate(name, scope, this))
+QDaemon::QDaemon(DaemonScope scope, QObject * parent)
+    : QObject(parent), d_ptr(new QDaemonPrivate(this))
 {
     Q_ASSERT_X(qApp, Q_FUNC_INFO, "You must create the application object first.");
 
-    if (!d_ptr->state.load())  {
+    Q_D(QDaemon);
+    d->state.setScope(scope);
+
+/*    if (!d_ptr->state.load())  {
         QString errorText = QT_DAEMON_TRANSLATE("Couldn't load the daemon configuration.");
         QMetaObject::invokeMethod(this, "error", Qt::QueuedConnection, Q_ARG(const QString &, errorText));
         QObject::connect(this, &QDaemon::error, qApp, &QCoreApplication::quit, Qt::QueuedConnection);
 
         return;
-    }
+    }*/
 
     // Try to correct the current working directory for some badly behaved systems (like Windows, which sets it to point to system root).
-    if (!QDir::setCurrent(d_ptr->state.directory()))  {
+    QString currentDir = d->state.directory();
+    if (!QFile::exists(currentDir) || !QDir::setCurrent(currentDir))  {
         QString errorText = QT_DAEMON_TRANSLATE("Couldn't set the daemon's working directory correctly.");
         QMetaObject::invokeMethod(this, "error", Qt::QueuedConnection, Q_ARG(const QString &, errorText));
     }
@@ -60,7 +65,7 @@ QDaemon::QDaemon(const QString & name, DaemonScope scope, QObject * parent)
 bool QDaemon::isValid() const
 {
     Q_D(const QDaemon);
-    return d->state.isLoaded();
+    return d->state.isKnown();
 }
 
 QString QDaemon::directoryPath() const
